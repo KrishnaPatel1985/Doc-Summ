@@ -1,0 +1,71 @@
+import logging
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from app.config import settings
+from app.db import Base, engine, ensure_columns
+from app.api.summarize import router as summarize_router
+from app.api.summary import router as summary_router
+from app.api.history import router as history_router
+from app.api.intelligence import router as intelligence_router
+
+logger = logging.getLogger("uvicorn.error")
+
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    Base.metadata.create_all(bind=engine)
+    ensure_columns()
+    yield
+
+
+app = FastAPI(
+    title="Document Summarizer API",
+    version="2.0.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.frontend_origin, "http://localhost:3000", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"error": "Validation error", "details": exc.errors()})
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {"status": "ok", "version": "2.0.0"}
+
+
+app.include_router(summarize_router, prefix="/api", tags=["Summarize"])
+app.include_router(summary_router, prefix="/api", tags=["Summary"])
+app.include_router(history_router, prefix="/api", tags=["History"])
+app.include_router(intelligence_router, prefix="/api", tags=["Intelligence"])
+
+# Serve built frontend if it exists (production / single-process mode)
+if os.path.isdir(FRONTEND_DIST):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="static")

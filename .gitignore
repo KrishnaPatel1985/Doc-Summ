@@ -1,0 +1,43 @@
+# Environment files / secrets
+.env
+*.env
+backend/.env
+frontend/.env
+
+# Python virtual environments
+.venv/
+venv/
+env/
+backend/venv/
+backend/.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node dependencies and build output
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Local database files
+*.db
+summarizer.db
+backend/summarizer.db
+
+# Uploads / generated files
+backend/uploads/
+uploads/
+
+# Claude / local AI tool files
+.claude/
+
+# Private/sample PDFs
+*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
