@@ -5,8 +5,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px clamp(20px, 6vw, 80px);
-  background: rgba(255, 255, 255, 0.85);
+  min-height: 56px;
+  padding: 9px max(20px, calc((100vw - 1160px) / 2 + 20px));
+  background: rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -20,20 +21,20 @@
   border: none;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   color: #0f172a;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .app-nav-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.32);
@@ -52,10 +53,10 @@
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: -0.1px;
+  letter-spacing: 0;
   cursor: pointer;
-  border-radius: 9px;
-  padding: 9px 16px;
+  border-radius: 8px;
+  padding: 8px 13px;
   transition: all 0.15s ease;
   white-space: nowrap;
 }
@@ -84,7 +85,9 @@
 }
 
 @media (max-width: 560px) {
-  .app-nav { padding: 10px 16px; }
-  .app-nav-logo { font-size: 18px; }
-  .app-nav-btn { padding: 8px 12px; }
+  .app-nav { padding: 8px 14px; }
+  .app-nav-logo { font-size: 17px; }
+  .app-nav-mark { width: 28px; height: 28px; }
+  .app-nav-actions { gap: 7px; }
+  .app-nav-btn { padding: 7px 10px; font-size: 13px; }
 }
