@@ -25,7 +25,6 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
         return f"Smoke summary ({style}, {length}, {tone}) for {len(text)} chars."
 
     def fake_analyze_document(text: str) -> dict:
-        print("fake analyze called")
         return {
             "main_topic": "Smoke test document",
             "key_takeaways": ["The current API returns a completed summary."],
@@ -94,7 +93,6 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
             )
             assert response.status_code == 200, response.text
             summary = response.json()
-            print(summary)
             assert summary["status"] == "done"
             assert summary["summary"]
             assert summary["key_insights"]["main_topic"] == "Smoke test document"

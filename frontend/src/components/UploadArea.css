@@ -13,7 +13,7 @@
     linear-gradient(#fff, #fff) padding-box,
     linear-gradient(135deg, rgba(98,88,245,0.22), rgba(14,165,233,0.12), rgba(226,232,240,0.9)) border-box;
   border: 1px solid transparent;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   padding: var(--space-4);
   box-shadow: var(--shadow-premium);
   overflow: visible;

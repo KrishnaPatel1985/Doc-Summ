@@ -112,6 +112,12 @@ class StudyResponse(BaseModel):
 def _load_json(raw: Any, default: Any):
     if not raw:
         return default
+    if isinstance(raw, (dict, list)):
+        return raw
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        return default
 
 
 def _compact_text(raw: Optional[str], limit: int = 700) -> Optional[str]:
@@ -139,12 +145,6 @@ def _source_snippets(input_text: Optional[str], insights_data: Any) -> List[str]
 
     fallback = _compact_text(input_text, 360)
     return snippets or ([fallback] if fallback else [])
-    if isinstance(raw, (dict, list)):
-        return raw
-    try:
-        return json.loads(raw)
-    except (ValueError, TypeError):
-        return default
 
 
 def job_to_summary_response(job) -> JobSummaryResponse:
