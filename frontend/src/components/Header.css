@@ -94,3 +94,18 @@
   .app-nav-actions { gap: 7px; }
   .app-nav-btn { padding: 7px 10px; font-size: 13px; }
 }
+
+@media (max-width: 560px) {
+  .app-nav {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .app-nav-actions {
+    width: 100%;
+  }
+  .app-nav-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}

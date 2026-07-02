@@ -61,7 +61,7 @@ const App: React.FC = () => {
     historyMutation.mutate(jobId);
   };
 
-  // Full reset → back to the main input state (used by Summarize Another, Get Started, logo)
+  // Full reset back to the main input state (used by Summarize Another, Get Started, logo)
   const handleReset = () => {
     summarizeMutation.reset();
     historyMutation.reset();
@@ -99,7 +99,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Hero — shown for input + loading so the brand/structure stays consistent */}
+          {/* Hero shown for input + loading so the brand/structure stays consistent */}
           {view !== 'result' && (
             <div className={`hero ${view === 'loading' ? 'hero--compact' : ''}`}>
               <div className="hero-badge">
@@ -109,8 +109,7 @@ const App: React.FC = () => {
               <h1 className="hero-title">Summarize Any<br />Document Instantly</h1>
               {view === 'idle' && (
                 <p className="hero-subtitle">
-                  Drop in a PDF, DOCX, or TXT file — or paste your text —<br />
-                  and get a clear, accurate AI summary in seconds.
+                  Drop in a PDF, DOCX, or TXT file, or paste your text, and get a clear, accurate AI summary in seconds.
                 </p>
               )}
             </div>

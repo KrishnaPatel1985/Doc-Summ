@@ -1,7 +1,7 @@
 /* ===== Fonts ===== */
 /* Loaded via index.html <link> tags */
 
-/* ===== Design Tokens — Light professional dashboard ===== */
+/* ===== Design Tokens - Light professional dashboard ===== */
 :root {
   --color-bg:           #f6f8fc;
   --color-surface:      #ffffff;
@@ -132,9 +132,8 @@ body {
   flex-direction: column;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 18% 0%, rgba(124,58,237,0.10) 0%, transparent 28%),
-    radial-gradient(circle at 82% 4%, rgba(14,165,233,0.10) 0%, transparent 30%),
-    linear-gradient(180deg, #ffffff 0%, #f8faff 38%, #f2f5fb 100%);
+    linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.98) 34%, #eef4fb 100%),
+    linear-gradient(90deg, rgba(98,88,245,0.05), rgba(14,165,233,0.04));
   background-attachment: fixed;
   overflow-x: hidden;
 }
@@ -145,8 +144,8 @@ body {
   height: 210px;
   pointer-events: none;
   background:
-    linear-gradient(90deg, transparent, rgba(99,102,241,0.10), transparent),
-    radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.84), transparent 68%);
+    linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0)),
+    linear-gradient(90deg, transparent, rgba(99,102,241,0.08), transparent);
   mask-image: linear-gradient(to bottom, #000, transparent);
   z-index: 0;
 }

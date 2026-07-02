@@ -399,7 +399,26 @@
     flex-direction: column;
   }
   .control-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
+    gap: 8px;
+  }
+  .control-group > .toolbar-btn,
+  .control-group > .menu-control {
+    width: 100%;
+    min-width: 0;
+  }
+  .control-group .toolbar-btn {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .control-group > .attach-btn,
+  .more-options .toolbar-btn {
+    justify-content: center;
+  }
+  .more-options {
+    grid-column: span 2;
   }
   .summarize-btn {
     width: 100%;
@@ -429,5 +448,29 @@
   .menu-control:nth-child(3) .menu-list {
     left: 0;
     right: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .control-group {
+    grid-template-columns: 1fr;
+  }
+  .more-options {
+    grid-column: auto;
+  }
+  .menu-list,
+  .more-options-popover {
+    left: 0;
+    right: auto;
+    width: 100%;
+    min-width: 0;
+  }
+  .include-options {
+    grid-template-columns: 1fr;
+  }
+  .text-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-1);
   }
 }

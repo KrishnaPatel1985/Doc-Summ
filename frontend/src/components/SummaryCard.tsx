@@ -8,15 +8,17 @@ interface SummaryCardProps {
   onReset: () => void;
 }
 
-type TabKey = 'summary' | 'insights' | 'actions' | 'ask' | 'study' | 'export';
+type TabKey = 'summary' | 'insights' | 'actions' | 'ask' | 'study';
+type TabIconKey = 'summary' | 'insights' | 'actions' | 'ask' | 'study';
+type InsightIconKey = 'takeaways' | 'numbers' | 'risk' | 'opportunity' | 'entities';
+type StudyIconKey = 'beginner' | 'flashcards' | 'quiz' | 'terms';
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'summary', label: 'Summary', icon: '📄' },
-  { key: 'insights', label: 'Key Insights', icon: '💡' },
-  { key: 'actions', label: 'Action Items', icon: '✅' },
-  { key: 'ask', label: 'Ask Document', icon: '💬' },
-  { key: 'study', label: 'Study Mode', icon: '🎓' },
-  { key: 'export', label: 'Export', icon: '⬇️' },
+const TABS: { key: TabKey; label: string; icon: TabIconKey }[] = [
+  { key: 'summary', label: 'Summary', icon: 'summary' },
+  { key: 'insights', label: 'Key Insights', icon: 'insights' },
+  { key: 'actions', label: 'Action Items', icon: 'actions' },
+  { key: 'ask', label: 'Ask Document', icon: 'ask' },
+  { key: 'study', label: 'Study Mode', icon: 'study' },
 ];
 
 const SUGGESTED_QUESTIONS = [
@@ -70,9 +72,9 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
   // ---- Export helpers ----
   const buildMarkdown = () => {
     const title = summary.filename || 'Text Input';
-    let md = `# DocSumm Report: ${title}\n\n_Generated ${fmtDate(summary.created_at)} · ${summary.method.toUpperCase()}_\n\n## Summary\n\n${summary.summary || ''}\n`;
+    let md = `# DocSumm Report: ${title}\n\n_Generated ${fmtDate(summary.created_at)} - ${summary.method.toUpperCase()}_\n\n## Summary\n\n${summary.summary || ''}\n`;
     if (insights) {
-      md += `\n## Key Insights\n\n**Main topic:** ${insights.main_topic || '—'}\n\n`;
+      md += `\n## Key Insights\n\n**Main topic:** ${insights.main_topic || 'N/A'}\n\n`;
       if (insights.key_takeaways.length) md += `**Key takeaways:**\n${insights.key_takeaways.map(t => `- ${t}`).join('\n')}\n\n`;
       if (insights.entities.length) md += `**Entities:** ${insights.entities.join(', ')}\n\n`;
       if (insights.numbers.length) md += `**Important numbers:**\n${insights.numbers.map(t => `- ${t}`).join('\n')}\n\n`;
@@ -83,7 +85,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
     return md;
   };
 
-  const handleCopySummary = async () => { if (summary.summary) { await navigator.clipboard.writeText(summary.summary); flash('summary'); } };
   const handleCopyMarkdown = async () => { await navigator.clipboard.writeText(buildMarkdown()); flash('md'); };
 
   const buildInsightsText = () => {
@@ -131,10 +132,10 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
     const win = window.open('', '_blank');
     if (!win) return;
     let body = `
-      <div class="brand">📄 DocSumm <span>Document Intelligence Report</span></div>
+      <div class="brand">DocSumm <span>Document Intelligence Report</span></div>
       <h1>${esc(title)}</h1>
-      <div class="meta">Generated ${esc(fmtDate(summary.created_at))} · ${esc(summary.method.toUpperCase())}
-        ${summary.length ? ' · ' + esc(summary.length) : ''}${summary.tone ? ' · ' + esc(summary.tone) : ''}</div>
+      <div class="meta">Generated ${esc(fmtDate(summary.created_at))} &middot; ${esc(summary.method.toUpperCase())}
+        ${summary.length ? ' &middot; ' + esc(summary.length) : ''}${summary.tone ? ' &middot; ' + esc(summary.tone) : ''}</div>
       <div class="stats">
         <span><b>${metrics.reduction}%</b> reduced</span>
         <span><b>${metrics.minutesSaved} min</b> saved</span>
@@ -143,7 +144,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
       </div>
       <h2>Summary</h2><p>${esc(summary.summary || '')}</p>`;
     if (insights) {
-      body += `<h2>Key Insights</h2><p><b>Main topic:</b> ${esc(insights.main_topic || '—')}</p>`;
+      body += `<h2>Key Insights</h2><p><b>Main topic:</b> ${esc(insights.main_topic || 'N/A')}</p>`;
       if (insights.key_takeaways.length) body += `<h3>Key takeaways</h3>${ul(insights.key_takeaways)}`;
       if (insights.entities.length) body += `<h3>Entities</h3><p>${esc(insights.entities.join(', '))}</p>`;
       if (insights.numbers.length) body += `<h3>Important numbers</h3>${ul(insights.numbers)}`;
@@ -152,10 +153,10 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
     }
     if (actionItems.length) body += `<h2>Action Items</h2>${ul(actionItems)}`;
     if (study) {
-      if (study.key_terms.length) body += `<h2>Study Notes — Key Terms</h2>${ul(study.key_terms.map(t => `${t.term}: ${t.definition}`))}`;
+      if (study.key_terms.length) body += `<h2>Study Notes - Key Terms</h2>${ul(study.key_terms.map(t => `${t.term}: ${t.definition}`))}`;
       if (study.eli5) body += `<h3>Explain like I'm a beginner</h3><p>${esc(study.eli5)}</p>`;
     }
-    win.document.write(`<!DOCTYPE html><html><head><title>DocSumm Report — ${esc(title)}</title><style>
+    win.document.write(`<!DOCTYPE html><html><head><title>DocSumm Report - ${esc(title)}</title><style>
       body{font-family:system-ui,-apple-system,sans-serif;padding:48px;max-width:820px;margin:0 auto;color:#1f2937;line-height:1.7}
       .brand{font-size:1.1rem;font-weight:800;color:#6366f1;margin-bottom:18px}
       .brand span{font-weight:500;color:#94a3b8;font-size:0.85rem;margin-left:6px}
@@ -229,7 +230,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
           </div>
         </div>
         <div className="rd-header-right">
-          <span className="rd-badge">✓ Done</span>
+          <span className="rd-badge"><CheckMiniIcon /> Done</span>
           <button className="btn btn-primary" onClick={onReset}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.36"/></svg>
             Summarize Another
@@ -249,14 +250,14 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
 
       {/* Tabs */}
       <div className="rd-tabs" role="tablist">
-        {TABS.filter(t => t.key !== 'export').map(t => (
+        {TABS.map(t => (
           <button
             key={t.key}
             role="tab"
             className={`rd-tab ${tab === t.key ? 'active' : ''}`}
             onClick={() => goTab(t.key)}
           >
-            <span className="rd-tab-icon">{t.icon}</span>{t.label}
+            <span className="rd-tab-icon"><TabIcon name={t.icon} /></span>{t.label}
           </button>
         ))}
       </div>
@@ -272,13 +273,13 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
             <div className="rd-insights">
               <div className="rd-topic">
                 <span className="rd-topic-label">Main topic</span>
-                <p>{insights.main_topic || '—'}</p>
+                <p>{insights.main_topic || 'N/A'}</p>
               </div>
-              <InsightList title="Key takeaways" items={insights.key_takeaways} icon="💡" />
+              <InsightList title="Key takeaways" items={insights.key_takeaways} icon="takeaways" />
               <InsightChips title="Important entities" items={insights.entities} />
-              <InsightList title="Important numbers & stats" items={insights.numbers} icon="🔢" />
-              <InsightList title="Risks & concerns" items={insights.risks} icon="⚠️" tone="risk" />
-              <InsightList title="Opportunities & recommendations" items={insights.opportunities} icon="🚀" tone="opp" />
+              <InsightList title="Important numbers & stats" items={insights.numbers} icon="numbers" />
+              <InsightList title="Risks & concerns" items={insights.risks} icon="risk" tone="risk" />
+              <InsightList title="Opportunities & recommendations" items={insights.opportunities} icon="opportunity" tone="opp" />
             </div>
           ) : <Empty text="No insights available for this document." />
         )}
@@ -331,19 +332,19 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
 
         {tab === 'study' && (
           <div className="rd-study">
-            {studyLoading && <div className="rd-loading"><div className="spinner" /> Generating study material…</div>}
+            {studyLoading && <div className="rd-loading"><div className="spinner" /> Generating study material...</div>}
             {studyError && <Empty text={studyError} />}
             {study && (
               <>
                 {study.eli5 && (
                   <section className="rd-study-section">
-                    <h3>🧒 Explain like I'm a beginner</h3>
+                    <SectionTitle icon="beginner">Explain like I'm a beginner</SectionTitle>
                     <p className="rd-eli5">{study.eli5}</p>
                   </section>
                 )}
                 {study.flashcards.length > 0 && (
                   <section className="rd-study-section">
-                    <h3>🃏 Flashcards <small>(click to flip)</small></h3>
+                    <SectionTitle icon="flashcards">Flashcards <small>(click to flip)</small></SectionTitle>
                     <div className="rd-flashcards">
                       {study.flashcards.map((c, i) => (
                         <button key={i} className={`rd-flashcard ${flipped[i] ? 'flipped' : ''}`} onClick={() => setFlipped(f => ({ ...f, [i]: !f[i] }))}>
@@ -356,7 +357,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
                 )}
                 {study.quiz.length > 0 && (
                   <section className="rd-study-section">
-                    <h3>❓ Quiz</h3>
+                    <SectionTitle icon="quiz">Quiz</SectionTitle>
                     <div className="rd-quiz">
                       {study.quiz.map((q, qi) => (
                         <div key={qi} className="rd-quiz-q">
@@ -383,7 +384,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
                 )}
                 {study.key_terms.length > 0 && (
                   <section className="rd-study-section">
-                    <h3>📚 Key terms</h3>
+                    <SectionTitle icon="terms">Key terms</SectionTitle>
                     <dl className="rd-terms">
                       {study.key_terms.map((t, i) => (
                         <div key={i} className="rd-term">
@@ -407,18 +408,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
             onCopyMarkdown={handleCopyMarkdown}
             onExportPDF={handleExportPDF}
           />
-        )}
-
-        {tab === 'export' && (
-          <div className="rd-export">
-            <p className="rd-export-note">Export your report or copy it elsewhere. The PDF and Markdown include the summary, key insights, and action items.</p>
-            <div className="rd-export-grid">
-              <button className="btn btn-ghost" onClick={handleCopySummary}>{copied === 'summary' ? '✓ Copied!' : 'Copy Summary'}</button>
-              <button className="btn btn-ghost" onClick={handleDownload}>Download .txt</button>
-              <button className="btn btn-ghost" onClick={handleCopyMarkdown}>{copied === 'md' ? '✓ Copied!' : 'Copy Markdown'}</button>
-              <button className="btn btn-primary" onClick={handleExportPDF}>Export PDF Report</button>
-            </div>
-          </div>
         )}
       </div>
     </div>
@@ -449,10 +438,10 @@ const ExportActionBar: React.FC<{
   </div>
 );
 
-const InsightList: React.FC<{ title: string; items: string[]; icon: string; tone?: string }> = ({ title, items, icon, tone }) =>
+const InsightList: React.FC<{ title: string; items: string[]; icon: InsightIconKey; tone?: string }> = ({ title, items, icon, tone }) =>
   items && items.length ? (
     <div className={`rd-insight-block ${tone ? 'rd-insight-' + tone : ''}`}>
-      <h4>{icon} {title}</h4>
+      <h4><InsightIcon name={icon} /> {title}</h4>
       <ul>{items.map((it, i) => <li key={i}>{it}</li>)}</ul>
     </div>
   ) : null;
@@ -460,10 +449,178 @@ const InsightList: React.FC<{ title: string; items: string[]; icon: string; tone
 const InsightChips: React.FC<{ title: string; items: string[] }> = ({ title, items }) =>
   items && items.length ? (
     <div className="rd-insight-block">
-      <h4>🏷️ {title}</h4>
+      <h4><InsightIcon name="entities" /> {title}</h4>
       <div className="rd-chips">{items.map((it, i) => <span key={i} className="rd-chip">{it}</span>)}</div>
     </div>
   ) : null;
+
+const SectionTitle: React.FC<{ icon: StudyIconKey; children: React.ReactNode }> = ({ icon, children }) => (
+  <h3><StudyIcon name={icon} /> {children}</h3>
+);
+
+const TabIcon: React.FC<{ name: TabIconKey }> = ({ name }) => {
+  switch (name) {
+    case 'summary':
+      return <FileTextIcon />;
+    case 'insights':
+      return <SparkIcon />;
+    case 'actions':
+      return <CheckCircleIcon />;
+    case 'ask':
+      return <MessageIcon />;
+    case 'study':
+      return <AcademicIcon />;
+  }
+};
+
+const InsightIcon: React.FC<{ name: InsightIconKey }> = ({ name }) => {
+  switch (name) {
+    case 'takeaways':
+      return <SparkIcon />;
+    case 'numbers':
+      return <HashIcon />;
+    case 'risk':
+      return <AlertIcon />;
+    case 'opportunity':
+      return <TrendingIcon />;
+    case 'entities':
+      return <TagIcon />;
+  }
+};
+
+const StudyIcon: React.FC<{ name: StudyIconKey }> = ({ name }) => {
+  switch (name) {
+    case 'beginner':
+      return <BookOpenIcon />;
+    case 'flashcards':
+      return <CardsIcon />;
+    case 'quiz':
+      return <QuestionIcon />;
+    case 'terms':
+      return <ListIcon />;
+  }
+};
+
+const IconBase: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <svg
+    className="rd-inline-icon"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {children}
+  </svg>
+);
+
+const FileTextIcon = () => (
+  <IconBase>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+  </IconBase>
+);
+
+const SparkIcon = () => (
+  <IconBase>
+    <path d="M12 3l1.7 5.2L19 10l-5.3 1.8L12 17l-1.7-5.2L5 10l5.3-1.8L12 3z" />
+    <path d="M5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16z" />
+  </IconBase>
+);
+
+const CheckCircleIcon = () => (
+  <IconBase>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8 12l2.4 2.4L16 9" />
+  </IconBase>
+);
+
+const CheckMiniIcon = () => (
+  <IconBase>
+    <path d="M20 6 9 17l-5-5" />
+  </IconBase>
+);
+
+const MessageIcon = () => (
+  <IconBase>
+    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+  </IconBase>
+);
+
+const AcademicIcon = () => (
+  <IconBase>
+    <path d="M22 10L12 5 2 10l10 5 10-5z" />
+    <path d="M6 12v5c3.5 2 8.5 2 12 0v-5" />
+  </IconBase>
+);
+
+const HashIcon = () => (
+  <IconBase>
+    <line x1="4" y1="9" x2="20" y2="9" />
+    <line x1="4" y1="15" x2="20" y2="15" />
+    <line x1="10" y1="3" x2="8" y2="21" />
+    <line x1="16" y1="3" x2="14" y2="21" />
+  </IconBase>
+);
+
+const AlertIcon = () => (
+  <IconBase>
+    <path d="M10.3 4.3L2.8 17.5A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.5L13.7 4.3a2 2 0 0 0-3.4 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </IconBase>
+);
+
+const TrendingIcon = () => (
+  <IconBase>
+    <polyline points="3 17 9 11 13 15 21 7" />
+    <polyline points="15 7 21 7 21 13" />
+  </IconBase>
+);
+
+const TagIcon = () => (
+  <IconBase>
+    <path d="M20 13l-7 7L4 11V4h7l9 9z" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+  </IconBase>
+);
+
+const BookOpenIcon = () => (
+  <IconBase>
+    <path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v17H5.5A2.5 2.5 0 0 1 3 17.5z" />
+    <path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v17h5.5a2.5 2.5 0 0 0 2.5-2.5z" />
+  </IconBase>
+);
+
+const CardsIcon = () => (
+  <IconBase>
+    <rect x="4" y="6" width="13" height="13" rx="2" />
+    <path d="M8 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-1" />
+  </IconBase>
+);
+
+const QuestionIcon = () => (
+  <IconBase>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9a2.7 2.7 0 0 1 5 1.4c0 2.1-2.5 2.3-2.5 4" />
+    <line x1="12" y1="18" x2="12.01" y2="18" />
+  </IconBase>
+);
+
+const ListIcon = () => (
+  <IconBase>
+    <line x1="8" y1="6" x2="21" y2="6" />
+    <line x1="8" y1="12" x2="21" y2="12" />
+    <line x1="8" y1="18" x2="21" y2="18" />
+    <line x1="3" y1="6" x2="3.01" y2="6" />
+    <line x1="3" y1="12" x2="3.01" y2="12" />
+    <line x1="3" y1="18" x2="3.01" y2="18" />
+  </IconBase>
+);
 
 const Empty: React.FC<{ text: string }> = ({ text }) => <div className="rd-empty">{text}</div>;
 
