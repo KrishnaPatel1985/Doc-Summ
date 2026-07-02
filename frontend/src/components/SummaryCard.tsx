@@ -8,8 +8,8 @@ interface SummaryCardProps {
   onReset: () => void;
 }
 
-type TabKey = 'summary' | 'insights' | 'actions' | 'ask' | 'study';
-type TabIconKey = 'summary' | 'insights' | 'actions' | 'ask' | 'study';
+type TabKey = 'summary' | 'insights' | 'actions' | 'evidence' | 'risk' | 'ask' | 'study';
+type TabIconKey = 'summary' | 'insights' | 'actions' | 'evidence' | 'risk' | 'ask' | 'study';
 type InsightIconKey = 'takeaways' | 'numbers' | 'risk' | 'opportunity' | 'entities';
 type StudyIconKey = 'beginner' | 'flashcards' | 'quiz' | 'terms';
 
@@ -17,6 +17,8 @@ const TABS: { key: TabKey; label: string; icon: TabIconKey }[] = [
   { key: 'summary', label: 'Summary', icon: 'summary' },
   { key: 'insights', label: 'Key Insights', icon: 'insights' },
   { key: 'actions', label: 'Action Items', icon: 'actions' },
+  { key: 'evidence', label: 'Evidence Map', icon: 'evidence' },
+  { key: 'risk', label: 'Risk Report', icon: 'risk' },
   { key: 'ask', label: 'Ask Document', icon: 'ask' },
   { key: 'study', label: 'Study Mode', icon: 'study' },
 ];
@@ -31,6 +33,15 @@ const SUGGESTED_QUESTIONS = [
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+
+const emptyRiskReport = {
+  risks: [] as string[],
+  opportunities: [] as string[],
+  assumptions: [] as string[],
+  missing_information: [] as string[],
+  follow_up_questions: [] as string[],
+  red_flags: [] as { issue: string; why_it_matters: string; suggested_follow_up: string }[],
+};
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
   const [tab, setTab] = useState<TabKey>('summary');
@@ -51,6 +62,13 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
 
   const insights = summary.key_insights;
   const actionItems = summary.action_items || [];
+  const evidenceMap = insights?.evidence_map || [];
+  const riskReport = {
+    ...emptyRiskReport,
+    risks: insights?.risks || [],
+    opportunities: insights?.opportunities || [],
+    ...(insights?.risk_report || {}),
+  };
 
   // ---- Metrics ----
   const metrics = useMemo(() => {
@@ -67,6 +85,25 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
     };
   }, [summary, actionItems.length, insights]);
 
+  const documentType = useMemo(() => {
+    if (summary.file_type) return summary.file_type.toUpperCase();
+    if (summary.filename && summary.filename.includes('.')) {
+      return summary.filename.split('.').pop()?.toUpperCase() || 'Document';
+    }
+    return summary.filename ? 'Document' : 'Text';
+  }, [summary.file_type, summary.filename]);
+
+  const contextSnippets = useMemo(() => {
+    const snippets = [
+      ...(summary.source_snippets || []),
+      ...evidenceMap.map(item => item.evidence_snippet),
+      summary.document_preview || '',
+    ]
+      .map(s => s.trim())
+      .filter(Boolean);
+    return Array.from(new Set(snippets)).slice(0, 3);
+  }, [summary.source_snippets, summary.document_preview, evidenceMap]);
+
   const flash = (key: string) => { setCopied(key); setTimeout(() => setCopied(null), 1800); };
 
   // ---- Export helpers ----
@@ -82,6 +119,14 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
       if (insights.opportunities.length) md += `**Opportunities:**\n${insights.opportunities.map(t => `- ${t}`).join('\n')}\n\n`;
     }
     if (actionItems.length) md += `## Action Items\n\n${actionItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n`;
+    if (evidenceMap.length) {
+      md += `\n## Evidence Map\n\n${evidenceMap.map((item, i) => (
+        `${i + 1}. **Claim:** ${item.claim || 'N/A'}\n   - Evidence: ${item.evidence_snippet || 'N/A'}\n   - Source: ${item.source || 'Document content'}\n   - Confidence: ${item.confidence || 'Medium'}`
+      )).join('\n\n')}\n`;
+    }
+    if (hasRiskReport(riskReport)) {
+      md += `\n## Risk Report\n\n${buildRiskText()}\n`;
+    }
     return md;
   };
 
@@ -105,21 +150,47 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
       ? actionItems.map((item, i) => `${i + 1}. ${item}`).join('\n')
       : 'No action items were found in this document.';
 
+  const buildEvidenceText = () =>
+    evidenceMap.length
+      ? evidenceMap.map((item, i) => [
+          `${i + 1}. Claim: ${item.claim || 'N/A'}`,
+          `Evidence: ${item.evidence_snippet || 'N/A'}`,
+          `Source: ${item.source || 'Document content'}`,
+          `Confidence: ${item.confidence || 'Medium'}`,
+        ].join('\n')).join('\n\n')
+      : 'No evidence map is available for this document.';
+
+  const buildRiskText = () => {
+    const parts = [
+      riskReport.risks.length ? `Risks:\n${riskReport.risks.map(t => `- ${t}`).join('\n')}` : '',
+      riskReport.opportunities.length ? `Opportunities:\n${riskReport.opportunities.map(t => `- ${t}`).join('\n')}` : '',
+      riskReport.assumptions.length ? `Assumptions:\n${riskReport.assumptions.map(t => `- ${t}`).join('\n')}` : '',
+      riskReport.missing_information.length ? `Missing information:\n${riskReport.missing_information.map(t => `- ${t}`).join('\n')}` : '',
+      riskReport.follow_up_questions.length ? `Follow-up questions:\n${riskReport.follow_up_questions.map(t => `- ${t}`).join('\n')}` : '',
+      riskReport.red_flags.length ? `Red flags:\n${riskReport.red_flags.map(flag => `- Issue: ${flag.issue || 'N/A'}\n  Why it matters: ${flag.why_it_matters || 'N/A'}\n  Suggested follow-up: ${flag.suggested_follow_up || 'N/A'}`).join('\n')}` : '',
+    ].filter(Boolean);
+    return parts.length ? parts.join('\n\n') : 'No risk report is available for this document.';
+  };
+
+  const buildCurrentText = () => {
+    if (tab === 'insights') return buildInsightsText();
+    if (tab === 'actions') return buildActionItemsText();
+    if (tab === 'evidence') return buildEvidenceText();
+    if (tab === 'risk') return buildRiskText();
+    return summary.summary || 'No summary available.';
+  };
+
   const handleCopyCurrent = async () => {
-    const content =
-      tab === 'insights' ? buildInsightsText() :
-      tab === 'actions' ? buildActionItemsText() :
-      summary.summary || 'No summary available.';
-    await navigator.clipboard.writeText(content);
+    await navigator.clipboard.writeText(buildCurrentText());
     flash(`copy-${tab}`);
   };
 
   const handleDownload = () => {
-    const blob = new Blob([summary.summary || ''], { type: 'text/plain' });
+    const blob = new Blob([buildCurrentText()], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `summary_${summary.filename?.replace(/\.[^.]+$/, '') || 'text'}.txt`;
+    a.download = `${tab}_${summary.filename?.replace(/\.[^.]+$/, '') || 'text'}.txt`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
@@ -152,6 +223,21 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
       if (insights.opportunities.length) body += `<h3>Opportunities & recommendations</h3>${ul(insights.opportunities)}`;
     }
     if (actionItems.length) body += `<h2>Action Items</h2>${ul(actionItems)}`;
+    if (evidenceMap.length) {
+      body += `<h2>Evidence Map</h2>`;
+      evidenceMap.forEach(item => {
+        body += `<div class="evidence"><h3>${esc(item.claim || 'Claim')}</h3><p>${esc(item.evidence_snippet || 'No evidence snippet available.')}</p><div class="meta">Source: ${esc(item.source || 'Document content')} &middot; Confidence: ${esc(item.confidence || 'Medium')}</div></div>`;
+      });
+    }
+    if (hasRiskReport(riskReport)) {
+      body += `<h2>Risk Report</h2>`;
+      if (riskReport.risks.length) body += `<h3>Risks</h3>${ul(riskReport.risks)}`;
+      if (riskReport.opportunities.length) body += `<h3>Opportunities</h3>${ul(riskReport.opportunities)}`;
+      if (riskReport.assumptions.length) body += `<h3>Assumptions</h3>${ul(riskReport.assumptions)}`;
+      if (riskReport.missing_information.length) body += `<h3>Missing Information</h3>${ul(riskReport.missing_information)}`;
+      if (riskReport.follow_up_questions.length) body += `<h3>Follow-up Questions</h3>${ul(riskReport.follow_up_questions)}`;
+      if (riskReport.red_flags.length) body += `<h3>Red Flags</h3>${ul(riskReport.red_flags.map(flag => `${flag.issue}: ${flag.why_it_matters} Suggested follow-up: ${flag.suggested_follow_up}`))}`;
+    }
     if (study) {
       if (study.key_terms.length) body += `<h2>Study Notes - Key Terms</h2>${ul(study.key_terms.map(t => `${t.term}: ${t.definition}`))}`;
       if (study.eli5) body += `<h3>Explain like I'm a beginner</h3><p>${esc(study.eli5)}</p>`;
@@ -166,6 +252,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
       .meta{font-size:0.82rem;color:#64748b;margin-bottom:16px}
       .stats{display:flex;gap:18px;flex-wrap:wrap;background:#f8fafc;border:1px solid #eef2f7;border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:0.85rem}
       .stats b{color:#6366f1}
+      .evidence{border:1px solid #eef2f7;border-radius:10px;padding:12px 14px;margin:10px 0;background:#fbfdff}
       p{white-space:pre-wrap}
       ul{margin:6px 0 6px 22px}
       li{margin-bottom:5px}
@@ -248,22 +335,51 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
         <MetricCard label="Insights" value={`${metrics.insightCount}`} sub="takeaways" />
       </div>
 
-      {/* Tabs */}
-      <div className="rd-tabs" role="tablist">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            role="tab"
-            className={`rd-tab ${tab === t.key ? 'active' : ''}`}
-            onClick={() => goTab(t.key)}
-          >
-            <span className="rd-tab-icon"><TabIcon name={t.icon} /></span>{t.label}
-          </button>
-        ))}
-      </div>
+      <div className="rd-workspace">
+        <aside className="rd-context-panel" aria-label="Document context">
+          <div className="rd-context-header">
+            <span className="rd-context-kicker">Document Context</span>
+            <h3 title={summary.filename || 'Text Input'}>{summary.filename || 'Text Input'}</h3>
+          </div>
+          <div className="rd-context-stats">
+            <ContextStat label="Type" value={documentType} />
+            <ContextStat label="Original length" value={`${metrics.orig.toLocaleString()} chars`} />
+            <ContextStat label="Summary length" value={`${metrics.sum.toLocaleString()} chars`} />
+            <ContextStat label="Reduction" value={`${metrics.reduction}%`} accent />
+          </div>
+          <div className="rd-context-section">
+            <h4>Extracted Preview</h4>
+            <p>{summary.document_preview || 'No extracted preview is available for this document.'}</p>
+          </div>
+          {contextSnippets.length > 0 && (
+            <div className="rd-context-section">
+              <h4>Source Snippets</h4>
+              <div className="rd-context-snippets">
+                {contextSnippets.map((snippet, i) => (
+                  <blockquote key={i}>{snippet}</blockquote>
+                ))}
+              </div>
+            </div>
+          )}
+        </aside>
 
-      {/* Panels */}
-      <div className="rd-panel">
+        <section className="rd-main-workspace">
+          {/* Tabs */}
+          <div className="rd-tabs" role="tablist">
+            {TABS.map(t => (
+              <button
+                key={t.key}
+                role="tab"
+                className={`rd-tab ${tab === t.key ? 'active' : ''}`}
+                onClick={() => goTab(t.key)}
+              >
+                <span className="rd-tab-icon"><TabIcon name={t.icon} /></span>{t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Panels */}
+          <div className="rd-panel">
         {tab === 'summary' && (
           <div className="rd-summary-text">{summary.summary || 'No summary available.'}</div>
         )}
@@ -292,6 +408,65 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
               ))}
             </ol>
           ) : <Empty text="No action items were found in this document." />
+        )}
+
+        {tab === 'evidence' && (
+          evidenceMap.length ? (
+            <div className="rd-evidence-map">
+              {evidenceMap.map((item, i) => (
+                <article key={i} className="rd-evidence-item">
+                  <div className="rd-evidence-head">
+                    <span className="rd-evidence-index">{i + 1}</span>
+                    <div>
+                      <span className="rd-evidence-label">Claim</span>
+                      <h4>{item.claim || 'N/A'}</h4>
+                    </div>
+                    <span className={`rd-confidence rd-confidence-${confidenceTone(item.confidence)}`}>
+                      {item.confidence || 'Medium'}
+                    </span>
+                  </div>
+                  <blockquote>{item.evidence_snippet || 'No evidence snippet available.'}</blockquote>
+                  <div className="rd-evidence-source">
+                    <FileTextIcon /> {item.source || 'Document content'}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : <Empty text="No evidence map is available for this document." />
+        )}
+
+        {tab === 'risk' && (
+          hasRiskReport(riskReport) ? (
+            <div className="rd-risk-report">
+              <div className="rd-risk-grid">
+                <RiskList title="Risks" items={riskReport.risks} tone="risk" />
+                <RiskList title="Opportunities" items={riskReport.opportunities} tone="opp" />
+                <RiskList title="Assumptions" items={riskReport.assumptions} />
+                <RiskList title="Missing information" items={riskReport.missing_information} />
+                <RiskList title="Follow-up questions" items={riskReport.follow_up_questions} />
+              </div>
+              {riskReport.red_flags.length > 0 && (
+                <section className="rd-red-flags">
+                  <h3><AlertIcon /> Red Flags</h3>
+                  <div className="rd-red-flag-list">
+                    {riskReport.red_flags.map((flag, i) => (
+                      <article key={i} className="rd-red-flag">
+                        <h4>{flag.issue || 'N/A'}</h4>
+                        <div>
+                          <span>Why it matters</span>
+                          <p>{flag.why_it_matters || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span>Suggested follow-up</span>
+                          <p>{flag.suggested_follow_up || 'N/A'}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          ) : <Empty text="No risk report is available for this document." />
         )}
 
         {tab === 'ask' && (
@@ -399,7 +574,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
           </div>
         )}
 
-        {(tab === 'summary' || tab === 'insights' || tab === 'actions') && (
+        {(tab === 'summary' || tab === 'insights' || tab === 'actions' || tab === 'evidence' || tab === 'risk') && (
           <ExportActionBar
             copied={copied === `copy-${tab}`}
             markdownCopied={copied === 'md'}
@@ -409,6 +584,8 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
             onExportPDF={handleExportPDF}
           />
         )}
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -421,6 +598,36 @@ const MetricCard: React.FC<{ label: string; value: string; sub: string; accent?:
     <span className="rd-metric-sub">{sub}</span>
   </div>
 );
+
+const ContextStat: React.FC<{ label: string; value: string; accent?: boolean }> = ({ label, value, accent }) => (
+  <div className={`rd-context-stat ${accent ? 'rd-context-stat-accent' : ''}`}>
+    <span>{label}</span>
+    <strong>{value}</strong>
+  </div>
+);
+
+const RiskList: React.FC<{ title: string; items: string[]; tone?: 'risk' | 'opp' }> = ({ title, items, tone }) =>
+  items.length ? (
+    <section className={`rd-risk-card ${tone ? 'rd-risk-card-' + tone : ''}`}>
+      <h4>{title}</h4>
+      <ul>{items.map((item, i) => <li key={i}>{item}</li>)}</ul>
+    </section>
+  ) : null;
+
+const hasRiskReport = (report: typeof emptyRiskReport) =>
+  report.risks.length > 0 ||
+  report.opportunities.length > 0 ||
+  report.assumptions.length > 0 ||
+  report.missing_information.length > 0 ||
+  report.follow_up_questions.length > 0 ||
+  report.red_flags.length > 0;
+
+const confidenceTone = (confidence: string) => {
+  const normalized = (confidence || '').toLowerCase();
+  if (normalized.includes('high')) return 'high';
+  if (normalized.includes('low')) return 'low';
+  return 'medium';
+};
 
 const ExportActionBar: React.FC<{
   copied: boolean;
@@ -466,6 +673,10 @@ const TabIcon: React.FC<{ name: TabIconKey }> = ({ name }) => {
       return <SparkIcon />;
     case 'actions':
       return <CheckCircleIcon />;
+    case 'evidence':
+      return <EvidenceIcon />;
+    case 'risk':
+      return <AlertIcon />;
     case 'ask':
       return <MessageIcon />;
     case 'study':
@@ -536,6 +747,14 @@ const CheckCircleIcon = () => (
   <IconBase>
     <circle cx="12" cy="12" r="9" />
     <path d="M8 12l2.4 2.4L16 9" />
+  </IconBase>
+);
+
+const EvidenceIcon = () => (
+  <IconBase>
+    <path d="M9 11l2 2 4-5" />
+    <path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8" />
+    <path d="M14 3h6v6" />
   </IconBase>
 );
 

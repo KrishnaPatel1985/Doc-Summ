@@ -25,6 +25,7 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
         return f"Smoke summary ({style}, {length}, {tone}) for {len(text)} chars."
 
     def fake_analyze_document(text: str) -> dict:
+        print("fake analyze called")
         return {
             "main_topic": "Smoke test document",
             "key_takeaways": ["The current API returns a completed summary."],
@@ -33,6 +34,24 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
             "risks": [],
             "opportunities": ["Keep smoke tests fast and deterministic."],
             "action_items": ["Verify current API behavior."],
+            "evidence_map": [{
+                "claim": "The smoke test checks the current API flow.",
+                "evidence_snippet": "Artificial intelligence is transforming industries.",
+                "source": "Document content",
+                "confidence": "High",
+            }],
+            "risk_report": {
+                "risks": ["External AI calls should stay mocked in smoke tests."],
+                "opportunities": ["Keep smoke tests fast and deterministic."],
+                "assumptions": ["The API routes are mounted under /api."],
+                "missing_information": ["No production database is used in this test."],
+                "follow_up_questions": ["Do history items reopen the full result payload?"],
+                "red_flags": [{
+                    "issue": "Unmocked external dependency",
+                    "why_it_matters": "It would make the smoke test slow or flaky.",
+                    "suggested_follow_up": "Keep summarizer functions patched.",
+                }],
+            },
         }
 
     def fake_answer_question(text: str, question: str) -> str:
@@ -75,10 +94,16 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
             )
             assert response.status_code == 200, response.text
             summary = response.json()
+            print(summary)
             assert summary["status"] == "done"
             assert summary["summary"]
             assert summary["key_insights"]["main_topic"] == "Smoke test document"
             assert summary["action_items"] == ["Verify current API behavior."]
+            assert summary["file_type"] == "text"
+            assert summary["document_preview"]
+            assert summary["source_snippets"]
+            assert summary["key_insights"]["evidence_map"][0]["source"] == "Document content"
+            assert summary["key_insights"]["risk_report"]["red_flags"][0]["issue"] == "Unmocked external dependency"
             job_id = summary["job_id"]
             print(f"Summary OK ({summary['char_count_summary']} chars)")
 
