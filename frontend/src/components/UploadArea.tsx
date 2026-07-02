@@ -23,6 +23,13 @@ interface UploadAreaProps {
   ) => void;
 }
 
+type MenuKey = 'style' | 'length' | 'tone' | 'sentences' | 'more' | null;
+
+const STYLE_OPTIONS = [
+  { value: 'paragraph', label: 'Paragraph' },
+  { value: 'bullets', label: 'Bullet Points' },
+  { value: 'action_items', label: 'Action Items' },
+];
 const LENGTH_OPTIONS = [
   { value: 'short', label: 'Short' },
   { value: 'medium', label: 'Medium' },
@@ -32,6 +39,22 @@ const TONE_OPTIONS = [
   { value: 'simple', label: 'Simple' },
   { value: 'professional', label: 'Professional' },
   { value: 'academic', label: 'Academic' },
+];
+const SENTENCE_OPTIONS = [3, 5, 7, 10];
+const FOCUS_OPTIONS = [
+  'General',
+  'Risks',
+  'Opportunities',
+  'Financials',
+  'Technical details',
+  'Study notes',
+  'Decisions/action items',
+];
+const INCLUDE_OPTIONS = [
+  { key: 'numbers', label: 'Include key numbers' },
+  { key: 'entities', label: 'Include names/entities' },
+  { key: 'recommendations', label: 'Include recommendations' },
+  { key: 'risks', label: 'Include risks/red flags' },
 ];
 
 function validateFile(file: File): string | null {
@@ -57,7 +80,15 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
   const [length, setLength] = useState('medium');
   const [tone, setTone] = useState('professional');
   const [customInstructions, setCustomInstructions] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [focusArea, setFocusArea] = useState('General');
+  const [includePrefs, setIncludePrefs] = useState<Record<string, boolean>>({
+    numbers: false,
+    entities: false,
+    recommendations: false,
+    risks: false,
+  });
+  const [showCustomSentences, setShowCustomSentences] = useState(false);
+  const [openMenu, setOpenMenu] = useState<MenuKey>(null);
   const [dragOver, setDragOver] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,11 +103,8 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
       const err = validateFile(f);
       if (err) {
         error = err;
-      } else {
-        // Prevent duplicate files
-        if (!files.some((existing) => existing.name === f.name && existing.size === f.size)) {
-          validFiles.push(f);
-        }
+      } else if (!files.some((existing) => existing.name === f.name && existing.size === f.size)) {
+        validFiles.push(f);
       }
     }
 
@@ -96,9 +124,8 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
 
     if (!error && validFiles.length > 0) {
       setFiles((prev) => [...prev, ...validFiles]);
-      setText(''); // clear text when files are added
+      setText('');
     }
-    // Clear input value so selecting the same file again fires onChange
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -122,223 +149,267 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
 
   const canSubmit = (files.length > 0 || text.trim().length > 0) && !fileError;
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const selectedStyle = STYLE_OPTIONS.find(opt => opt.value === style)?.label || 'Paragraph';
+  const selectedLength = LENGTH_OPTIONS.find(opt => opt.value === length)?.label || 'Medium';
+  const selectedTone = TONE_OPTIONS.find(opt => opt.value === tone)?.label || 'Professional';
+  const hasMoreOptions =
+    customInstructions.trim() ||
+    focusArea !== 'General' ||
+    Object.values(includePrefs).some(Boolean);
+
+  const buildCustomInstructions = () => {
+    const parts: string[] = [];
+    if (customInstructions.trim()) parts.push(customInstructions.trim());
+    if (focusArea !== 'General') parts.push(`Focus area: ${focusArea}.`);
+    const included = INCLUDE_OPTIONS
+      .filter(opt => includePrefs[opt.key])
+      .map(opt => opt.label.replace('Include ', '').toLowerCase());
+    if (included.length) parts.push(`Include: ${included.join(', ')}.`);
+    return parts.join('\n');
+  };
 
   const handleSubmit = () => {
     if (!canSubmit) return;
-    onSubmit(files, text.trim() || null, sentences, style, customInstructions, length, tone);
+    onSubmit(files, text.trim() || null, sentences, style, buildCustomInstructions(), length, tone);
+  };
+
+  const toggleMenu = (menu: MenuKey) => {
+    setOpenMenu(current => current === menu ? null : menu);
+  };
+
+  const setValidatedSentences = (value: number) => {
+    if (!Number.isFinite(value)) return;
+    setSentences(Math.min(50, Math.max(1, Math.round(value))));
+  };
+
+  const toggleIncludePref = (key: string) => {
+    setIncludePrefs(current => ({ ...current, [key]: !current[key] }));
   };
 
   return (
-    <div className="upload-area card animate-in">
+    <div
+      className={`upload-area composer-card animate-in ${dragOver ? 'composer-card--drag' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={onDrop}
+    >
       <div className="upload-area-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
         </svg>
         <h2>Add your content</h2>
       </div>
 
-      {/* Drop Zone / File List */}
-      <div
-        id="drop-zone"
-        className={`drop-zone ${dragOver ? 'drag-over' : ''} ${files.length > 0 ? 'has-file' : ''}`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
-        onClick={() => files.length === 0 && fileInputRef.current?.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ALLOWED_EXTS.join(',')}
-          onChange={onFileChange}
-          style={{ display: 'none' }}
-          id="file-input"
-          multiple
-        />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ALLOWED_EXTS.join(',')}
+        onChange={onFileChange}
+        style={{ display: 'none' }}
+        id="file-input"
+        multiple
+      />
 
-        {files.length > 0 ? (
-          <div className="file-list" onClick={(e) => e.stopPropagation()}>
-            <div className="file-list-header">
-              <span>Selected Files ({files.length})</span>
-            </div>
-            {files.map((file, idx) => (
-              <div key={idx} className="file-preview-card">
-                <div className="file-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.5">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                  </svg>
-                </div>
-                <div className="file-info">
-                  <p className="file-name" title={file.name}>{file.name}</p>
-                  <p className="file-meta">{(file.size / (1024 * 1024)).toFixed(2)} MB · {file.type.split('/').pop()?.toUpperCase()}</p>
-                </div>
-                <button
-                  id={`remove-file-${idx}`}
-                  className="btn btn-ghost remove-btn"
-                  onClick={() => removeFile(idx)}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                  Remove
-                </button>
-              </div>
-            ))}
-            <div className="file-list-actions">
-              <button
-                className="btn btn-ghost add-more-btn"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                + Add More Files
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="drop-zone-empty">
-            <div className={`upload-icon ${dragOver ? 'pulse' : ''}`}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <polyline points="16 16 12 12 8 16"/>
-                <line x1="12" y1="12" x2="12" y2="21"/>
-                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
-              </svg>
-            </div>
-            <p className="drop-label">{dragOver ? 'Drop files here' : 'Drag & drop your files here'}</p>
-            <p className="drop-sub">— or —</p>
-            <button id="browse-btn" className="btn btn-ghost" type="button" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-              Browse Files
-            </button>
-            <p className="drop-types">Supports: PDF · TXT · DOCX · Max {MAX_SIZE_MB} MB per file</p>
-          </div>
-        )}
-      </div>
-
-      {/* File Error */}
-      {fileError && (
-        <div className="error-banner">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          {fileError}
-        </div>
-      )}
-
-      {/* Divider */}
-      <div className="divider"><span>or paste / type text below</span></div>
-
-      {/* Text Area */}
       <div className={`textarea-wrapper ${files.length > 0 ? 'dimmed' : ''}`}>
         <textarea
           id="text-input"
           className="text-input"
-          placeholder="Type or paste your text here..."
+          placeholder="Paste text or ask DocSumm to summarize a document..."
           value={text}
           onChange={(e) => { setText(e.target.value); if (e.target.value) setFiles([]); }}
           disabled={files.length > 0}
           rows={6}
         />
-        {text && files.length === 0 && (
-          <div className="text-meta">
-            <span>{text.length} chars · {wordCount} words</span>
-            <button id="clear-text-btn" className="btn btn-ghost clear-btn" onClick={() => setText('')}>Clear</button>
-          </div>
-        )}
       </div>
 
-      {/* Style Selector */}
-      <div className="style-row">
-        <label className="style-label">Output style:</label>
-        <div className="style-options">
-          {[
-            { value: 'paragraph', label: '📝 Paragraph' },
-            { value: 'bullets', label: '• Bullet Points' },
-            { value: 'action_items', label: '✅ Action Items' },
-          ].map(opt => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`style-btn ${style === opt.value ? 'active' : ''}`}
-              onClick={() => setStyle(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
+      {(files.length > 0 || (text && files.length === 0)) && (
+        <div className="composer-meta-row">
+          {files.length > 0 ? (
+            <div className="file-chip-list">
+              {files.map((file, idx) => (
+                <span key={idx} className="file-chip" title={file.name}>
+                  <FileIcon />
+                  <span>{file.name}</span>
+                  <button id={`remove-file-${idx}`} type="button" onClick={() => removeFile(idx)} aria-label={`Remove ${file.name}`}>
+                    <XIcon />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="text-meta">
+              <span>{text.length} chars / {wordCount} words</span>
+              <button id="clear-text-btn" className="clear-text-btn" type="button" onClick={() => setText('')}>Clear</button>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Length Selector */}
-      <div className="style-row">
-        <label className="style-label">Length:</label>
-        <div className="style-options">
-          {LENGTH_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`style-btn ${length === opt.value ? 'active' : ''}`}
-              onClick={() => setLength(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tone Selector */}
-      <div className="style-row">
-        <label className="style-label">Tone:</label>
-        <div className="style-options">
-          {TONE_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`style-btn ${tone === opt.value ? 'active' : ''}`}
-              onClick={() => setTone(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Advanced / Custom Instructions */}
-      <div className="advanced-section">
-        <button
-          type="button"
-          className="advanced-toggle"
-          onClick={() => setShowAdvanced(v => !v)}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            style={{ transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>
-            <polyline points="9 18 15 12 9 6"/>
+      {fileError && (
+        <div className="error-banner composer-error">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          Custom instructions {customInstructions.trim() ? '(active)' : '(optional)'}
-        </button>
-        {showAdvanced && (
-          <textarea
-            className="text-input custom-instructions-input"
-            placeholder='e.g. "Focus on financial figures" or "Write for a non-technical audience"'
-            value={customInstructions}
-            onChange={e => setCustomInstructions(e.target.value)}
-            rows={3}
-          />
-        )}
-      </div>
-
-      {/* Sentence Count + Submit */}
-      <div className="submit-row">
-        <div className="sentence-control">
-          <span className="sentence-label">Summary sentences:</span>
-          <button id="dec-sentences-btn" className="sentence-btn" onClick={() => setSentences(s => Math.max(1, s - 1))}>−</button>
-          <span id="sentences-display" className="sentence-val">{sentences}</span>
-          <button id="inc-sentences-btn" className="sentence-btn" onClick={() => setSentences(s => Math.min(20, s + 1))}>+</button>
+          {fileError}
         </div>
-        <button
-          id="summarize-btn"
-          className="btn btn-primary summarize-btn"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-        >
+      )}
+
+      <div className="control-toolbar">
+        <div className="control-group" aria-label="Summary customization controls">
+          <button id="browse-btn" type="button" className="toolbar-btn attach-btn" onClick={() => fileInputRef.current?.click()}>
+            <PaperclipIcon />
+            Attach file
+          </button>
+
+          <div className="menu-control">
+            <button type="button" className="toolbar-btn" onClick={() => toggleMenu('style')} aria-expanded={openMenu === 'style'}>
+              <span>Style: {selectedStyle}</span>
+              <ChevronIcon />
+            </button>
+            {openMenu === 'style' && (
+              <MenuList>
+                {STYLE_OPTIONS.map(opt => (
+                  <MenuItem key={opt.value} active={style === opt.value} onClick={() => { setStyle(opt.value); setOpenMenu(null); }}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </MenuList>
+            )}
+          </div>
+
+          <div className="menu-control">
+            <button type="button" className="toolbar-btn" onClick={() => toggleMenu('length')} aria-expanded={openMenu === 'length'}>
+              <span>Length: {selectedLength}</span>
+              <ChevronIcon />
+            </button>
+            {openMenu === 'length' && (
+              <MenuList>
+                {LENGTH_OPTIONS.map(opt => (
+                  <MenuItem key={opt.value} active={length === opt.value} onClick={() => { setLength(opt.value); setOpenMenu(null); }}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </MenuList>
+            )}
+          </div>
+
+          <div className="menu-control">
+            <button type="button" className="toolbar-btn" onClick={() => toggleMenu('tone')} aria-expanded={openMenu === 'tone'}>
+              <span>Tone: {selectedTone}</span>
+              <ChevronIcon />
+            </button>
+            {openMenu === 'tone' && (
+              <MenuList>
+                {TONE_OPTIONS.map(opt => (
+                  <MenuItem key={opt.value} active={tone === opt.value} onClick={() => { setTone(opt.value); setOpenMenu(null); }}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </MenuList>
+            )}
+          </div>
+
+          <div className="menu-control">
+            <button type="button" className="toolbar-btn" onClick={() => toggleMenu('sentences')} aria-expanded={openMenu === 'sentences'}>
+              <span>Sentences: {sentences}</span>
+              <ChevronIcon />
+            </button>
+            {openMenu === 'sentences' && (
+              <MenuList compact>
+                {SENTENCE_OPTIONS.map(opt => (
+                  <MenuItem key={opt} active={sentences === opt && !showCustomSentences} onClick={() => { setSentences(opt); setShowCustomSentences(false); setOpenMenu(null); }}>
+                    {opt}
+                  </MenuItem>
+                ))}
+                <button
+                  type="button"
+                  className={`menu-item ${showCustomSentences || !SENTENCE_OPTIONS.includes(sentences) ? 'active' : ''}`}
+                  onClick={() => setShowCustomSentences(true)}
+                >
+                  <span>Custom</span>
+                </button>
+                {showCustomSentences && (
+                  <label className="custom-sentence-field">
+                    <span>Sentences</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={sentences}
+                      onChange={(e) => setValidatedSentences(Number(e.target.value))}
+                      onBlur={() => setValidatedSentences(sentences)}
+                    />
+                  </label>
+                )}
+              </MenuList>
+            )}
+          </div>
+
+          <div className="menu-control more-options">
+            <button
+              type="button"
+              className={`toolbar-btn more-options-btn ${openMenu === 'more' || hasMoreOptions ? 'active' : ''}`}
+              onClick={() => toggleMenu('more')}
+              aria-expanded={openMenu === 'more'}
+            >
+              More options
+              {hasMoreOptions && <span className="active-dot" aria-label="Advanced options active" />}
+              <ChevronIcon />
+            </button>
+            {openMenu === 'more' && (
+              <div className="more-options-popover">
+                <div className="more-options-section">
+                  <label htmlFor="custom-instructions" className="more-options-label">Custom instructions</label>
+                  <textarea
+                    id="custom-instructions"
+                    className="text-input custom-instructions-input"
+                    placeholder='e.g. "Focus on business risks" or "Explain for a beginner"'
+                    value={customInstructions}
+                    onChange={e => setCustomInstructions(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="more-options-section">
+                  <span className="more-options-label">Focus area</span>
+                  <div className="focus-chip-grid">
+                    {FOCUS_OPTIONS.map(option => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`focus-chip ${focusArea === option ? 'active' : ''}`}
+                        onClick={() => setFocusArea(option)}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="more-options-hint">Detail level uses the Length control in the toolbar.</p>
+
+                <div className="more-options-section">
+                  <span className="more-options-label">Include</span>
+                  <div className="include-options">
+                    {INCLUDE_OPTIONS.map(option => (
+                      <label key={option.key} className="include-option">
+                        <input
+                          type="checkbox"
+                          checked={includePrefs[option.key]}
+                          onChange={() => toggleIncludePref(option.key)}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <button id="summarize-btn" className="btn btn-primary summarize-btn" onClick={handleSubmit} disabled={!canSubmit}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
           </svg>
@@ -348,5 +419,48 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
     </div>
   );
 };
+
+const MenuList: React.FC<{ children: React.ReactNode; compact?: boolean }> = ({ children, compact }) => (
+  <div className={`menu-list ${compact ? 'menu-list--compact' : ''}`}>
+    {children}
+  </div>
+);
+
+const MenuItem: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
+  <button type="button" className={`menu-item ${active ? 'active' : ''}`} onClick={onClick}>
+    <span>{children}</span>
+    {active && (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    )}
+  </button>
+);
+
+const ChevronIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="6 9 12 15 18 9"/>
+  </svg>
+);
+
+const FileIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+  </svg>
+);
+
+const XIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="6" x2="6" y2="18"/>
+    <line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
+
+const PaperclipIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21.44 11.05 12 20.49a6 6 0 0 1-8.49-8.49l9.9-9.9a4 4 0 0 1 5.66 5.66l-9.9 9.9a2 2 0 1 1-2.83-2.83l8.49-8.49"/>
+  </svg>
+);
 
 export default UploadArea;

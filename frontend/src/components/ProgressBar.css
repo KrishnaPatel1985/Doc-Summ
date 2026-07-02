@@ -5,6 +5,12 @@
   width: 100%;
   max-width: 780px;
   margin: 0 auto;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, rgba(98,88,245,0.18), rgba(226,232,240,0.92)) border-box;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  box-shadow: var(--shadow-premium);
 }
 .progress-file-info {
   display: flex; align-items: center; gap: var(--space-2);
@@ -41,7 +47,7 @@
   position: relative;
   overflow: hidden;
 }
-.progress-fill.bar-processing { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+.progress-fill.bar-processing { background: linear-gradient(90deg, #6258f5, #8b5cf6); }
 .progress-fill.indeterminate { width: 40%; animation: indeterminate-slide 1.6s ease-in-out infinite; }
 @keyframes indeterminate-slide {
   0%   { transform: translateX(-150%); }

@@ -86,6 +86,33 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
   const handleCopySummary = async () => { if (summary.summary) { await navigator.clipboard.writeText(summary.summary); flash('summary'); } };
   const handleCopyMarkdown = async () => { await navigator.clipboard.writeText(buildMarkdown()); flash('md'); };
 
+  const buildInsightsText = () => {
+    if (!insights) return 'No insights available for this document.';
+    const sections = [
+      `Main topic: ${insights.main_topic || 'N/A'}`,
+      insights.key_takeaways.length ? `Key takeaways:\n${insights.key_takeaways.map(t => `- ${t}`).join('\n')}` : '',
+      insights.entities.length ? `Entities: ${insights.entities.join(', ')}` : '',
+      insights.numbers.length ? `Important numbers:\n${insights.numbers.map(t => `- ${t}`).join('\n')}` : '',
+      insights.risks.length ? `Risks:\n${insights.risks.map(t => `- ${t}`).join('\n')}` : '',
+      insights.opportunities.length ? `Opportunities:\n${insights.opportunities.map(t => `- ${t}`).join('\n')}` : '',
+    ];
+    return sections.filter(Boolean).join('\n\n');
+  };
+
+  const buildActionItemsText = () =>
+    actionItems.length
+      ? actionItems.map((item, i) => `${i + 1}. ${item}`).join('\n')
+      : 'No action items were found in this document.';
+
+  const handleCopyCurrent = async () => {
+    const content =
+      tab === 'insights' ? buildInsightsText() :
+      tab === 'actions' ? buildActionItemsText() :
+      summary.summary || 'No summary available.';
+    await navigator.clipboard.writeText(content);
+    flash(`copy-${tab}`);
+  };
+
   const handleDownload = () => {
     const blob = new Blob([summary.summary || ''], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -222,7 +249,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
 
       {/* Tabs */}
       <div className="rd-tabs" role="tablist">
-        {TABS.map(t => (
+        {TABS.filter(t => t.key !== 'export').map(t => (
           <button
             key={t.key}
             role="tab"
@@ -371,6 +398,17 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
           </div>
         )}
 
+        {(tab === 'summary' || tab === 'insights' || tab === 'actions') && (
+          <ExportActionBar
+            copied={copied === `copy-${tab}`}
+            markdownCopied={copied === 'md'}
+            onCopy={handleCopyCurrent}
+            onDownload={handleDownload}
+            onCopyMarkdown={handleCopyMarkdown}
+            onExportPDF={handleExportPDF}
+          />
+        )}
+
         {tab === 'export' && (
           <div className="rd-export">
             <p className="rd-export-note">Export your report or copy it elsewhere. The PDF and Markdown include the summary, key insights, and action items.</p>
@@ -392,6 +430,22 @@ const MetricCard: React.FC<{ label: string; value: string; sub: string; accent?:
     <span className="rd-metric-label">{label}</span>
     <span className="rd-metric-value">{value}</span>
     <span className="rd-metric-sub">{sub}</span>
+  </div>
+);
+
+const ExportActionBar: React.FC<{
+  copied: boolean;
+  markdownCopied: boolean;
+  onCopy: () => void;
+  onDownload: () => void;
+  onCopyMarkdown: () => void;
+  onExportPDF: () => void;
+}> = ({ copied, markdownCopied, onCopy, onDownload, onCopyMarkdown, onExportPDF }) => (
+  <div className="rd-export-action-bar">
+    <button className="btn btn-ghost" onClick={onCopy}>{copied ? 'Copied!' : 'Copy'}</button>
+    <button className="btn btn-ghost" onClick={onDownload}>Download .txt</button>
+    <button className="btn btn-ghost" onClick={onCopyMarkdown}>{markdownCopied ? 'Copied!' : 'Copy Markdown'}</button>
+    <button className="btn btn-primary" onClick={onExportPDF}>Export PDF Report</button>
   </div>
 );
 
