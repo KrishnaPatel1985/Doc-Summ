@@ -23,7 +23,7 @@ interface UploadAreaProps {
     length: string,
     tone: string,
   ) => void;
-  onCompare?: (a: DocInput, b: DocInput) => void;
+  onCompare?: (a: DocInput, b: DocInput, focus: string) => void;
 }
 
 const CTA_LABELS: Record<TaskKey, string> = {
@@ -91,6 +91,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({ task, onSubmit, onCompare }) =>
   const [compareB, setCompareB] = useState<File | null>(null);
   const [compareAText, setCompareAText] = useState('');
   const [compareBText, setCompareBText] = useState('');
+  const [compareFocus, setCompareFocus] = useState('');
   const compareARef = useRef<HTMLInputElement>(null);
   const compareBRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState('');
@@ -176,7 +177,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({ task, onSubmit, onCompare }) =>
   const canCompare = hasDocA && hasDocB;
   const handleCompare = () => {
     if (!canCompare || !onCompare) return;
-    onCompare({ file: compareA, text: compareAText }, { file: compareB, text: compareBText });
+    onCompare({ file: compareA, text: compareAText }, { file: compareB, text: compareBText }, compareFocus);
   };
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   const selectedStyle = STYLE_OPTIONS.find(opt => opt.value === style)?.label || 'Paragraph';
@@ -237,6 +238,12 @@ const UploadArea: React.FC<UploadAreaProps> = ({ task, onSubmit, onCompare }) =>
             <CompareDoc label="Document A" file={compareA} inputRef={compareARef} onPick={setCompareA} text={compareAText} onText={setCompareAText} />
             <CompareDoc label="Document B" file={compareB} inputRef={compareBRef} onPick={setCompareB} text={compareBText} onText={setCompareBText} />
           </div>
+          <input
+            className="text-input compare-focus-input"
+            placeholder="Optional: focus the comparison (e.g. pricing terms, risks, methodology)…"
+            value={compareFocus}
+            onChange={(e) => setCompareFocus(e.target.value)}
+          />
           <div className="compare-cta-row">
             <button type="button" className="btn btn-primary summarize-btn" onClick={handleCompare} disabled={!canCompare}>
               <ScalesIcon />

@@ -441,6 +441,18 @@
   box-shadow: 0 0 0 3px var(--color-primary-glow);
 }
 .compare-doc-file { padding: var(--space-1) 0; }
+.compare-focus-input.text-input {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: var(--space-3);
+  min-height: 0;
+  resize: none;
+}
+.compare-focus-input.text-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
+}
 .compare-cta-row {
   display: flex;
   align-items: center;

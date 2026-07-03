@@ -1,75 +1,152 @@
-.task-selector {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
+.workflow-selector {
   width: 100%;
-  max-width: 820px;
+  max-width: 940px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.task-pill {
+.ws-title {
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #334155;
+}
+
+/* Grid of workflow cards */
+.ws-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.ws-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), border-color var(--transition-fast),
+    box-shadow var(--transition-fast), background var(--transition-fast);
+}
+.ws-card:hover {
+  transform: translateY(-2px);
+  border-color: #c7cdff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+.ws-card.active {
+  border-color: #6258f5;
+  background: linear-gradient(180deg, #fbfbff, #f5f5ff);
+  box-shadow: 0 0 0 1px #6258f5, 0 14px 30px rgba(98, 88, 245, 0.16);
+}
+
+.ws-card-icon {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 8px 15px;
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  color: #475569;
-  font-family: var(--font-sans);
-  font-size: 13.5px;
-  font-weight: 650;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: transform var(--transition-fast), background var(--transition-fast),
-    border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
-}
-.task-pill:hover {
-  transform: translateY(-1px);
-  border-color: #c7cdff;
-  color: #0f172a;
-  background: #fff;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
-}
-.task-pill.active {
-  color: #fff;
-  border-color: transparent;
-  background: linear-gradient(135deg, #6258f5, #7c3aed);
-  box-shadow: 0 10px 22px rgba(98, 88, 245, 0.26);
-}
-
-.task-pill-icon { font-size: 15px; line-height: 1; }
-.task-pill-label { line-height: 1; }
-
-.task-pill-soon {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: var(--radius-full);
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
   background: #eef0ff;
   color: #6258f5;
+  border: 1px solid #e2e5ff;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
-.task-pill.active .task-pill-soon {
-  background: rgba(255, 255, 255, 0.22);
+.ws-card:hover .ws-card-icon { background: #e7e9ff; }
+.ws-card.active .ws-card-icon {
+  background: linear-gradient(135deg, #6258f5, #8b5cf6);
   color: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 18px rgba(98, 88, 245, 0.28);
 }
 
-@media (max-width: 640px) {
-  .task-selector {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .task-selector::-webkit-scrollbar { display: none; }
-  .task-pill { flex: 0 0 auto; }
+.ws-card-title {
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+.ws-card-desc {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.ws-card-check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #6258f5;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(98, 88, 245, 0.35);
+}
+
+/* Compare — full-width workflow card */
+.ws-compare {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: left;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), border-color var(--transition-fast),
+    box-shadow var(--transition-fast), background var(--transition-fast);
+}
+.ws-compare:hover {
+  transform: translateY(-2px);
+  border-color: #c7cdff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+.ws-compare.active {
+  border-color: #6258f5;
+  background: linear-gradient(180deg, #fbfbff, #f5f5ff);
+  box-shadow: 0 0 0 1px #6258f5, 0 14px 30px rgba(98, 88, 245, 0.16);
+}
+.ws-compare .ws-card-icon { flex-shrink: 0; }
+.ws-compare:hover .ws-card-icon { background: #e7e9ff; }
+.ws-compare.active .ws-card-icon {
+  background: linear-gradient(135deg, #6258f5, #8b5cf6);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 18px rgba(98, 88, 245, 0.28);
+}
+.ws-compare-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ws-compare-title {
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .ws-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .ws-grid { grid-template-columns: 1fr; }
+  .ws-card { padding: var(--space-3) var(--space-4); }
 }

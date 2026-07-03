@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { SummaryResponse, StudyData, ChatMessage } from '../types';
+import type { SummaryResponse, StudyData, ChatMessage, TaskKey } from '../types';
 import { askDocument, fetchStudy, fetchChat } from '../api/client';
 import './SummaryCard.css';
 
@@ -7,6 +7,7 @@ interface SummaryCardProps {
   summary: SummaryResponse;
   onReset: () => void;
   initialTab?: string;
+  workflow?: TaskKey;
 }
 
 type TabKey = 'summary' | 'insights' | 'actions' | 'evidence' | 'risk' | 'ask' | 'study';
@@ -44,10 +45,21 @@ const emptyRiskReport = {
   red_flags: [] as { issue: string; why_it_matters: string; suggested_follow_up: string }[],
 };
 
-const VALID_TABS: TabKey[] = ['summary', 'insights', 'actions', 'evidence', 'risk', 'ask', 'study'];
+const ALL_TAB_KEYS: TabKey[] = ['summary', 'insights', 'actions', 'evidence', 'risk', 'ask', 'study'];
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab }) => {
-  const startTab: TabKey = VALID_TABS.includes(initialTab as TabKey) ? (initialTab as TabKey) : 'summary';
+// Which tabs each workflow shows (in order; the first is the default active tab).
+// Study/Compare use their own standalone workspaces, so they never reach SummaryCard.
+const WORKFLOW_TABS: Partial<Record<TaskKey, TabKey[]>> = {
+  summarize: ['summary', 'insights', 'actions', 'evidence', 'risk'],
+  ask: ['ask'],
+  risk: ['risk', 'evidence'],
+  action: ['actions', 'evidence'],
+  evidence: ['evidence', 'summary'],
+};
+
+const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab, workflow }) => {
+  const visibleTabs: TabKey[] = (workflow && WORKFLOW_TABS[workflow]) || ALL_TAB_KEYS;
+  const startTab: TabKey = visibleTabs.includes(initialTab as TabKey) ? (initialTab as TabKey) : visibleTabs[0];
   const [tab, setTab] = useState<TabKey>(startTab);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -359,7 +371,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab 
         <aside className="rd-context-panel" aria-label="Document context">
           <div className="rd-context-header">
             <span className="rd-context-kicker">Document Context</span>
-            <h3 title={summary.filename || 'Text Input'}>{summary.filename || 'Text Input'}</h3>
+            <h3>{summary.filename || 'Text Input'}</h3>
           </div>
           <div className="rd-context-stats">
             <ContextStat label="Type" value={documentType} />
@@ -386,16 +398,20 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab 
         <section className="rd-main-workspace">
           {/* Tabs */}
           <div className="rd-tabs" role="tablist">
-            {TABS.map(t => (
-              <button
-                key={t.key}
-                role="tab"
-                className={`rd-tab ${tab === t.key ? 'active' : ''}`}
-                onClick={() => goTab(t.key)}
-              >
-                <span className="rd-tab-icon"><TabIcon name={t.icon} /></span>{t.label}
-              </button>
-            ))}
+            {visibleTabs.map(key => {
+              const t = TABS.find(td => td.key === key);
+              if (!t) return null;
+              return (
+                <button
+                  key={t.key}
+                  role="tab"
+                  className={`rd-tab ${tab === t.key ? 'active' : ''}`}
+                  onClick={() => goTab(t.key)}
+                >
+                  <span className="rd-tab-icon"><TabIcon name={t.icon} /></span>{t.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Panels */}

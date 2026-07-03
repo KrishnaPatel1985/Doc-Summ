@@ -15,8 +15,12 @@ EMPTY_COMPARE = {
 }
 
 
-def compare_documents(text_a: str, text_b: str) -> dict:
-    """Compare two documents and return a structured comparison as a dict."""
+def compare_documents(text_a: str, text_b: str, focus: str = "") -> dict:
+    """Compare two documents and return a structured comparison as a dict.
+
+    ``focus`` optionally steers the comparison toward a particular angle
+    (e.g. "pricing terms"); empty by default so behavior is unchanged.
+    """
     a = (text_a or "").strip()[: MAX_INPUT_CHARS // 2]
     b = (text_b or "").strip()[: MAX_INPUT_CHARS // 2]
     if not a or not b:
@@ -33,8 +37,11 @@ def compare_documents(text_a: str, text_b: str) -> dict:
         '- "unique_b": array of concise strings for points that appear only in Document B.\n'
         '- "conclusion": a short paragraph giving the overall takeaway of the comparison.\n'
         '- "recommendation": a short, actionable recommendation based on the comparison. Empty string if not applicable.\n'
-        "Base everything strictly on the two documents. Respond with valid JSON only."
+        "Base everything strictly on the two documents. Do not invent page numbers or sections. "
+        "Respond with valid JSON only."
     )
+    if focus and focus.strip():
+        system_prompt += f" Focus the comparison specifically on: {focus.strip()}."
     try:
         response = get_client().chat.completions.create(
             model=MODEL,

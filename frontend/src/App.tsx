@@ -22,16 +22,6 @@ const TASK_TO_TAB: Record<TaskKey, string> = {
   compare: 'summary',
 };
 
-const TASK_HERO: Record<TaskKey, { title: string; subtitle: string }> = {
-  summarize: { title: 'Summarize Any Document Instantly', subtitle: 'Drop in a PDF, DOCX, or TXT file, or paste your text, and get a clear, accurate AI summary in seconds.' },
-  study: { title: 'Turn Any Document into a Study Pack', subtitle: 'Upload or paste your material and generate flashcards, a quiz, and key terms to learn faster.' },
-  ask: { title: 'Ask Questions About Your Document', subtitle: 'Upload or paste content, then chat with it — answers are grounded in your document.' },
-  compare: { title: 'Compare Two Documents Side by Side', subtitle: 'See similarities, differences, contradictions, and a final conclusion across two files.' },
-  risk: { title: 'Surface Risks and Red Flags Fast', subtitle: 'Upload or paste a document and get risks, assumptions, missing info, and follow-up questions.' },
-  action: { title: 'Extract a Clear Action Plan', subtitle: 'Turn any document into concrete tasks, decisions, and next steps you can act on.' },
-  evidence: { title: 'Map Claims to Their Evidence', subtitle: 'Upload or paste a document and see each key claim backed by supporting evidence.' },
-};
-
 const StarIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -47,6 +37,7 @@ const App: React.FC = () => {
   const [resetKey, setResetKey] = useState(0); // forces a fresh UploadArea on reset
   const [task, setTask] = useState<TaskKey>('summarize');
   const [resultTab, setResultTab] = useState<string>('summary');
+  const [resultWorkflow, setResultWorkflow] = useState<TaskKey>('summarize');
 
   const queryClient = useQueryClient();
 
@@ -76,17 +67,17 @@ const App: React.FC = () => {
 
   // Compare task: two documents in, structured comparison out (stateless).
   const compareMutation = useMutation({
-    mutationFn: ({ a, b }: { a: DocInput; b: DocInput }) => compareDocuments(a, b),
+    mutationFn: ({ a, b, focus }: { a: DocInput; b: DocInput; focus: string }) => compareDocuments(a, b, focus),
     onSuccess: (data) => setComparison(data),
   });
 
-  const handleCompare = (a: DocInput, b: DocInput) => {
+  const handleCompare = (a: DocInput, b: DocInput, focus: string) => {
     setHistoryOpen(false);
     setSummary(null);
     setPreparedDoc(null);
     setActiveFilename(a.file?.name || b.file?.name || 'Comparison');
     compareMutation.reset();
-    compareMutation.mutate({ a, b });
+    compareMutation.mutate({ a, b, focus });
   };
 
   const focusInput = () => {
@@ -110,6 +101,7 @@ const App: React.FC = () => {
     }
 
     setResultTab(TASK_TO_TAB[task] || 'summary'); // open the tab matching the chosen task
+    setResultWorkflow(task);                       // controls which result tabs are shown
     summarizeMutation.reset();
     summarizeMutation.mutate({ files, text, sentences, style, customInstructions, length, tone });
   };
@@ -117,6 +109,7 @@ const App: React.FC = () => {
   const handleSelectJob = (jobId: string) => {
     setHistoryOpen(false);
     setResultTab('summary'); // history always reopens on the Summary tab
+    setResultWorkflow('summarize'); // saved jobs show the full summarize tab set
     summarizeMutation.reset();
     setSummary(null);
     setPreparedDoc(null);
@@ -171,12 +164,14 @@ const App: React.FC = () => {
           {view !== 'result' && (
             <div className={`hero ${view === 'loading' ? 'hero--compact' : ''}`}>
               <div className="hero-badge">
-                <span className="hero-badge-dark"><StarIcon /> AI</span>
+                <span className="hero-badge-dark"><StarIcon /></span>
                 <span className="hero-badge-light">AI Document Workspace</span>
               </div>
               <h1 className="hero-title">Understand, Study, Compare &amp; Analyze Documents with AI</h1>
               {view === 'idle' && (
-                <p className="hero-subtitle">{TASK_HERO[task].subtitle}</p>
+                <p className="hero-subtitle">
+                  Upload a PDF, DOCX, or TXT file, or paste your text, then choose how DocSumm should work with it.
+                </p>
               )}
             </div>
           )}
@@ -199,7 +194,7 @@ const App: React.FC = () => {
           )}
 
           {view === 'result' && !comparison && !preparedDoc && summary && (
-            <SummaryCard key={summary.job_id} summary={summary} onReset={handleReset} initialTab={resultTab} />
+            <SummaryCard key={summary.job_id} summary={summary} onReset={handleReset} initialTab={resultTab} workflow={resultWorkflow} />
           )}
         </div>
       </main>

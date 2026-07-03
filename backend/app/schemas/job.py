@@ -127,9 +127,18 @@ class PrepareResponse(BaseModel):
     status: str
 
 
+class CompareDocMeta(BaseModel):
+    name: str = ""
+    file_type: str = ""
+    char_count: int = 0
+    preview: str = ""
+
+
 class CompareResponse(BaseModel):
     doc_a_name: str = "Document A"
     doc_b_name: str = "Document B"
+    doc_a: CompareDocMeta = Field(default_factory=CompareDocMeta)
+    doc_b: CompareDocMeta = Field(default_factory=CompareDocMeta)
     overview: str = ""
     similarities: List[str] = Field(default_factory=list)
     differences: List[str] = Field(default_factory=list)

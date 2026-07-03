@@ -67,12 +67,13 @@ export async function prepareDocument(files: File[], text: string | null): Promi
   return apiFetch<PreparedDoc>('/prepare', { method: 'POST', body: form });
 }
 
-export async function compareDocuments(a: DocInput, b: DocInput): Promise<CompareResult> {
+export async function compareDocuments(a: DocInput, b: DocInput, focus?: string): Promise<CompareResult> {
   const form = new FormData();
   if (a.file) form.append('file_a', a.file);
   else if (a.text.trim()) form.append('text_a', a.text.trim());
   if (b.file) form.append('file_b', b.file);
   else if (b.text.trim()) form.append('text_b', b.text.trim());
+  if (focus && focus.trim()) form.append('focus', focus.trim());
   return apiFetch<CompareResult>('/compare', { method: 'POST', body: form });
 }
 

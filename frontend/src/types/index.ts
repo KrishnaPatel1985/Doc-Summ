@@ -107,9 +107,18 @@ export interface DocInput {
   text: string;
 }
 
+export interface CompareDocMeta {
+  name: string;
+  file_type: string;
+  char_count: number;
+  preview: string;
+}
+
 export interface CompareResult {
   doc_a_name: string;
   doc_b_name: string;
+  doc_a?: CompareDocMeta;
+  doc_b?: CompareDocMeta;
   overview: string;
   similarities: string[];
   differences: string[];
