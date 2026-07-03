@@ -1,5 +1,15 @@
 export type JobStatus = 'idle' | 'done' | 'error';
 
+// Task-based workspace (Phase 1)
+export type TaskKey =
+  | 'summarize'
+  | 'study'
+  | 'ask'
+  | 'compare'
+  | 'risk'
+  | 'action'
+  | 'evidence';
+
 export interface KeyInsights {
   main_topic: string;
   key_takeaways: string[];
@@ -66,12 +76,48 @@ export interface HistoryItem {
 export interface Flashcard {
   front: string;
   back: string;
+  topic?: string;
 }
 
 export interface QuizQuestion {
   question: string;
   options: string[];
   answer: string;
+  explanation?: string;
+}
+
+export interface StudyOptions {
+  flashcard_count: number;
+  quiz_count: number;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  quiz_type: 'multiple_choice' | 'true_false' | 'short_answer' | 'mixed';
+}
+
+export interface PreparedDoc {
+  job_id: string;
+  filename: string | null;
+  file_type: string | null;
+  char_count_original: number | null;
+  document_preview: string | null;
+  status: string;
+}
+
+export interface DocInput {
+  file: File | null;
+  text: string;
+}
+
+export interface CompareResult {
+  doc_a_name: string;
+  doc_b_name: string;
+  overview: string;
+  similarities: string[];
+  differences: string[];
+  contradictions: string[];
+  unique_a: string[];
+  unique_b: string[];
+  conclusion: string;
+  recommendation: string;
 }
 
 export interface KeyTerm {
@@ -89,4 +135,10 @@ export interface StudyData {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+export interface QuizAttempt {
+  score: number;
+  total: number;
+  at: number;
 }

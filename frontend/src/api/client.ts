@@ -1,4 +1,4 @@
-import type { SummaryResponse, HistoryItem, StudyData } from '../types';
+import type { SummaryResponse, HistoryItem, StudyData, StudyOptions, PreparedDoc, DocInput, CompareResult, ChatMessage, QuizAttempt } from '../types';
 
 const BASE = '/api';
 
@@ -52,6 +52,45 @@ export async function askDocument(jobId: string, question: string): Promise<stri
   return res.answer;
 }
 
-export async function fetchStudy(jobId: string): Promise<StudyData> {
-  return apiFetch<StudyData>(`/study/${jobId}`, { method: 'POST' });
+export async function fetchStudy(jobId: string, options?: StudyOptions): Promise<StudyData> {
+  return apiFetch<StudyData>(`/study/${jobId}`, {
+    method: 'POST',
+    headers: options ? { 'Content-Type': 'application/json' } : undefined,
+    body: options ? JSON.stringify(options) : undefined,
+  });
+}
+
+export async function prepareDocument(files: File[], text: string | null): Promise<PreparedDoc> {
+  const form = new FormData();
+  files.forEach(f => form.append('files', f));
+  if (text) form.append('text', text);
+  return apiFetch<PreparedDoc>('/prepare', { method: 'POST', body: form });
+}
+
+export async function compareDocuments(a: DocInput, b: DocInput): Promise<CompareResult> {
+  const form = new FormData();
+  if (a.file) form.append('file_a', a.file);
+  else if (a.text.trim()) form.append('text_a', a.text.trim());
+  if (b.file) form.append('file_b', b.file);
+  else if (b.text.trim()) form.append('text_b', b.text.trim());
+  return apiFetch<CompareResult>('/compare', { method: 'POST', body: form });
+}
+
+// ----- Phase 5: persisted records -----
+export async function saveQuizResult(jobId: string, score: number, total: number, answers?: unknown): Promise<void> {
+  await apiFetch('/quiz-results', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job_id: jobId, score, total, answers: answers ?? null }),
+  });
+}
+
+export async function fetchQuizResults(jobId: string): Promise<QuizAttempt[]> {
+  const rows = await apiFetch<{ score: number; total: number; created_at: string }[]>(`/quiz-results/${jobId}`);
+  return rows.map(r => ({ score: r.score, total: r.total, at: Date.parse(r.created_at) || 0 }));
+}
+
+export async function fetchChat(jobId: string): Promise<ChatMessage[]> {
+  const rows = await apiFetch<{ role: 'user' | 'assistant'; message: string }[]>(`/chat/${jobId}`);
+  return rows.map(r => ({ role: r.role, content: r.message }));
 }

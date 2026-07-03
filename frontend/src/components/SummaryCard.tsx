@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { SummaryResponse, StudyData, ChatMessage } from '../types';
-import { askDocument, fetchStudy } from '../api/client';
+import { askDocument, fetchStudy, fetchChat } from '../api/client';
 import './SummaryCard.css';
 
 interface SummaryCardProps {
   summary: SummaryResponse;
   onReset: () => void;
+  initialTab?: string;
 }
 
 type TabKey = 'summary' | 'insights' | 'actions' | 'evidence' | 'risk' | 'ask' | 'study';
@@ -43,8 +44,11 @@ const emptyRiskReport = {
   red_flags: [] as { issue: string; why_it_matters: string; suggested_follow_up: string }[],
 };
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
-  const [tab, setTab] = useState<TabKey>('summary');
+const VALID_TABS: TabKey[] = ['summary', 'insights', 'actions', 'evidence', 'risk', 'ask', 'study'];
+
+const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab }) => {
+  const startTab: TabKey = VALID_TABS.includes(initialTab as TabKey) ? (initialTab as TabKey) : 'summary';
+  const [tab, setTab] = useState<TabKey>(startTab);
   const [copied, setCopied] = useState<string | null>(null);
 
   // Ask Document state
@@ -299,6 +303,22 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset }) => {
     setTab(k);
     if (k === 'study') loadStudy();
   };
+
+  // If the workspace opens directly on Study (Study task), fetch the study pack once.
+  useEffect(() => {
+    if (startTab === 'study') loadStudy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load any persisted Q&A for this document so the conversation survives reloads (Phase 5).
+  useEffect(() => {
+    let active = true;
+    fetchChat(summary.job_id)
+      .then(prior => { if (active && prior.length) setMessages(prior); })
+      .catch(() => { /* no persisted chat / offline */ });
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary.job_id]);
 
   return (
     <div className="result-dashboard animate-in">

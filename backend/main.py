@@ -14,6 +14,10 @@ from app.api.summarize import router as summarize_router
 from app.api.summary import router as summary_router
 from app.api.history import router as history_router
 from app.api.intelligence import router as intelligence_router
+from app.api.documents import router as documents_router
+from app.api.compare import router as compare_router
+from app.api.records import router as records_router
+import app.models.workspace  # noqa: F401  (register Phase 5 tables for create_all)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -65,6 +69,9 @@ app.include_router(summarize_router, prefix="/api", tags=["Summarize"])
 app.include_router(summary_router, prefix="/api", tags=["Summary"])
 app.include_router(history_router, prefix="/api", tags=["History"])
 app.include_router(intelligence_router, prefix="/api", tags=["Intelligence"])
+app.include_router(documents_router, prefix="/api", tags=["Documents"])
+app.include_router(compare_router, prefix="/api", tags=["Compare"])
+app.include_router(records_router, prefix="/api", tags=["Records"])
 
 # Serve built frontend if it exists (production / single-process mode)
 if os.path.isdir(FRONTEND_DIST):

@@ -17,8 +17,11 @@ def get_history(
     db: Session = Depends(get_db),
 ):
     """Return paginated list of all past summarization jobs."""
+    # Only completed summaries appear in history — prepared-only docs
+    # (created by /prepare for standalone Study/Ask) are excluded.
     jobs = (
         db.query(SummarizationJob)
+        .filter(SummarizationJob.status == "done")
         .order_by(SummarizationJob.created_at.desc())
         .offset(skip)
         .limit(limit)

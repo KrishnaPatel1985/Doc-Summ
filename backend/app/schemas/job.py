@@ -89,12 +89,14 @@ class AskResponse(BaseModel):
 class Flashcard(BaseModel):
     front: str
     back: str
+    topic: str = ""
 
 
 class QuizQuestion(BaseModel):
     question: str
     options: List[str] = []
     answer: str
+    explanation: str = ""
 
 
 class KeyTerm(BaseModel):
@@ -107,6 +109,61 @@ class StudyResponse(BaseModel):
     quiz: List[QuizQuestion] = Field(default_factory=list)
     key_terms: List[KeyTerm] = Field(default_factory=list)
     eli5: str = ""
+
+
+class StudyRequest(BaseModel):
+    flashcard_count: int = 5
+    quiz_count: int = 5
+    difficulty: str = "intermediate"
+    quiz_type: str = "mixed"
+
+
+class PrepareResponse(BaseModel):
+    job_id: UUID
+    filename: Optional[str] = None
+    file_type: Optional[str] = None
+    char_count_original: Optional[int] = None
+    document_preview: Optional[str] = None
+    status: str
+
+
+class CompareResponse(BaseModel):
+    doc_a_name: str = "Document A"
+    doc_b_name: str = "Document B"
+    overview: str = ""
+    similarities: List[str] = Field(default_factory=list)
+    differences: List[str] = Field(default_factory=list)
+    contradictions: List[str] = Field(default_factory=list)
+    unique_a: List[str] = Field(default_factory=list)
+    unique_b: List[str] = Field(default_factory=list)
+    conclusion: str = ""
+    recommendation: str = ""
+
+
+# ----- Phase 5: persisted records -----
+class QuizResultCreate(BaseModel):
+    job_id: UUID
+    score: int
+    total: int
+    answers: Any = None
+
+
+class QuizResultItem(BaseModel):
+    id: UUID
+    job_id: UUID
+    score: int
+    total: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ChatMessageItem(BaseModel):
+    role: str
+    message: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 def _load_json(raw: Any, default: Any):

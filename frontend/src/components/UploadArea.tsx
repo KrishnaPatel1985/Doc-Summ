@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
+import type { TaskKey, DocInput } from '../types';
 import './UploadArea.css';
 
 const ALLOWED_TYPES = [
@@ -12,6 +13,7 @@ const MAX_FILES = 10;
 const MAX_TOTAL_SIZE_MB = 60;
 
 interface UploadAreaProps {
+  task: TaskKey;
   onSubmit: (
     files: File[],
     text: string | null,
@@ -21,7 +23,18 @@ interface UploadAreaProps {
     length: string,
     tone: string,
   ) => void;
+  onCompare?: (a: DocInput, b: DocInput) => void;
 }
+
+const CTA_LABELS: Record<TaskKey, string> = {
+  summarize: 'Summarize Document',
+  study: 'Generate Study Pack',
+  ask: 'Prepare Document',
+  compare: 'Compare Documents',
+  risk: 'Generate Risk Report',
+  action: 'Extract Action Plan',
+  evidence: 'Generate Evidence Map',
+};
 
 type MenuKey = 'style' | 'length' | 'tone' | 'sentences' | 'more' | null;
 
@@ -72,8 +85,14 @@ function validateFile(file: File): string | null {
   return null;
 }
 
-const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
+const UploadArea: React.FC<UploadAreaProps> = ({ task, onSubmit, onCompare }) => {
   const [files, setFiles] = useState<File[]>([]);
+  const [compareA, setCompareA] = useState<File | null>(null);
+  const [compareB, setCompareB] = useState<File | null>(null);
+  const [compareAText, setCompareAText] = useState('');
+  const [compareBText, setCompareBText] = useState('');
+  const compareARef = useRef<HTMLInputElement>(null);
+  const compareBRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState('');
   const [sentences, setSentences] = useState(7);
   const [style, setStyle] = useState('paragraph');
@@ -147,7 +166,18 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const canSubmit = (files.length > 0 || text.trim().length > 0) && !fileError;
+  const isCompare = task === 'compare';
+  const showSummaryControls = task === 'summarize';
+  const ctaLabel = CTA_LABELS[task];
+  const canSubmit = (files.length > 0 || text.trim().length > 0) && !fileError && !isCompare;
+
+  const hasDocA = !!compareA || compareAText.trim().length > 0;
+  const hasDocB = !!compareB || compareBText.trim().length > 0;
+  const canCompare = hasDocA && hasDocB;
+  const handleCompare = () => {
+    if (!canCompare || !onCompare) return;
+    onCompare({ file: compareA, text: compareAText }, { file: compareB, text: compareBText });
+  };
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   const selectedStyle = STYLE_OPTIONS.find(opt => opt.value === style)?.label || 'Paragraph';
   const selectedLength = LENGTH_OPTIONS.find(opt => opt.value === length)?.label || 'Medium';
@@ -198,9 +228,27 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
         </svg>
-        <h2>Add your content</h2>
+        <h2>{isCompare ? 'Add two documents to compare' : 'Add your content'}</h2>
       </div>
 
+      {isCompare && (
+        <div className="compare-block">
+          <div className="compare-cols">
+            <CompareDoc label="Document A" file={compareA} inputRef={compareARef} onPick={setCompareA} text={compareAText} onText={setCompareAText} />
+            <CompareDoc label="Document B" file={compareB} inputRef={compareBRef} onPick={setCompareB} text={compareBText} onText={setCompareBText} />
+          </div>
+          <div className="compare-cta-row">
+            <button type="button" className="btn btn-primary summarize-btn" onClick={handleCompare} disabled={!canCompare}>
+              <ScalesIcon />
+              Compare Documents
+            </button>
+            {!canCompare && <span className="compare-soon-note">Add a file or text to both documents to compare.</span>}
+          </div>
+        </div>
+      )}
+
+      {!isCompare && (
+      <>
       <input
         ref={fileInputRef}
         type="file"
@@ -262,6 +310,8 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
             Attach file
           </button>
 
+          {showSummaryControls && (
+          <>
           <div className="menu-control">
             <button type="button" className="toolbar-btn" onClick={() => toggleMenu('style')} aria-expanded={openMenu === 'style'}>
               <span>Style: {selectedStyle}</span>
@@ -407,18 +457,72 @@ const UploadArea: React.FC<UploadAreaProps> = ({ onSubmit }) => {
               </div>
             )}
           </div>
+          </>
+          )}
         </div>
 
         <button id="summarize-btn" className="btn btn-primary summarize-btn" onClick={handleSubmit} disabled={!canSubmit}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
           </svg>
-          Summarize
+          {ctaLabel}
         </button>
       </div>
+      </>
+      )}
     </div>
   );
 };
+
+const CompareDoc: React.FC<{
+  label: string;
+  file: File | null;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onPick: (f: File | null) => void;
+  text: string;
+  onText: (t: string) => void;
+}> = ({ label, file, inputRef, onPick, text, onText }) => (
+  <div className={`compare-doc ${file ? 'has-file' : ''}`}>
+    <div className="compare-doc-head">
+      <span className="compare-doc-label">{label}</span>
+      <button type="button" className="toolbar-btn attach-btn" onClick={() => inputRef.current?.click()}>
+        <PaperclipIcon />
+        {file ? 'Change file' : 'Attach'}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ALLOWED_EXTS.join(',')}
+        style={{ display: 'none' }}
+        onChange={(e) => onPick(e.target.files?.[0] || null)}
+      />
+    </div>
+    {file ? (
+      <div className="compare-doc-file">
+        <span className="file-chip" title={file.name}>
+          <FileIcon />
+          <span>{file.name}</span>
+          <button type="button" onClick={() => onPick(null)} aria-label={`Remove ${file.name}`}><XIcon /></button>
+        </span>
+      </div>
+    ) : (
+      <textarea
+        className="text-input compare-doc-textarea"
+        placeholder={`Paste ${label} text, or attach a PDF, DOCX, or TXT…`}
+        value={text}
+        onChange={(e) => onText(e.target.value)}
+        rows={5}
+      />
+    )}
+  </div>
+);
+
+const ScalesIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 3v18M5 21h14M3 7l4-4 4 4M21 7l-4-4-4 4"/>
+    <path d="M3 7l-2 6a4 4 0 0 0 8 0L7 7M21 7l-2 6a4 4 0 0 0 8 0"/>
+  </svg>
+);
 
 const MenuList: React.FC<{ children: React.ReactNode; compact?: boolean }> = ({ children, compact }) => (
   <div className={`menu-list ${compact ? 'menu-list--compact' : ''}`}>

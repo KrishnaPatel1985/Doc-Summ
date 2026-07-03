@@ -56,7 +56,13 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
     def fake_answer_question(text: str, question: str) -> str:
         return f"Smoke answer for: {question}"
 
-    def fake_generate_study(text: str) -> dict:
+    def fake_generate_study(
+        text: str,
+        flashcard_count: int = 5,
+        quiz_count: int = 5,
+        difficulty: str = "intermediate",
+        quiz_type: str = "mixed",
+    ) -> dict:
         return {
             "flashcards": [{"front": "What is tested?", "back": "The current API flow."}],
             "quiz": [{
