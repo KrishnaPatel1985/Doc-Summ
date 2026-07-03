@@ -1,152 +1,94 @@
-.workflow-selector {
-  width: 100%;
-  max-width: 940px;
-  margin: 0 auto;
+/* ===== Mission menu (left side of the command center) ===== */
+.mission-menu {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-}
-
-.ws-title {
-  text-align: center;
-  font-family: var(--font-sans);
-  font-size: 1.02rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: #334155;
-}
-
-/* Grid of workflow cards */
-.ws-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.ws-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-align: left;
-  background: #ffffff;
+  gap: 4px;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  cursor: pointer;
+  border-radius: var(--radius-xl);
+  padding: var(--space-3);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), border-color var(--transition-fast),
-    box-shadow var(--transition-fast), background var(--transition-fast);
-}
-.ws-card:hover {
-  transform: translateY(-2px);
-  border-color: #c7cdff;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-}
-.ws-card.active {
-  border-color: #6258f5;
-  background: linear-gradient(180deg, #fbfbff, #f5f5ff);
-  box-shadow: 0 0 0 1px #6258f5, 0 14px 30px rgba(98, 88, 245, 0.16);
 }
 
-.ws-card-icon {
+.mission-menu-kicker {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-dim);
+  padding: 6px 8px 4px;
+}
+
+.mission-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 10px 11px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.mission-item:hover { background: var(--color-surface-2); }
+.mission-item.active {
+  background: var(--color-accent-soft);
+  border-color: #d6d8ff;
+}
+
+.mission-item-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 9px;
   background: #eef0ff;
-  color: #6258f5;
+  color: var(--color-primary);
   border: 1px solid #e2e5ff;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
-.ws-card:hover .ws-card-icon { background: #e7e9ff; }
-.ws-card.active .ws-card-icon {
+.mission-item.active .mission-item-icon {
   background: linear-gradient(135deg, #6258f5, #8b5cf6);
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 8px 18px rgba(98, 88, 245, 0.28);
+  box-shadow: 0 6px 14px rgba(98, 88, 245, 0.28);
 }
 
-.ws-card-title {
+.mission-item-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mission-item-title {
   font-family: var(--font-sans);
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: #0f172a;
 }
-.ws-card-desc {
+.mission-item-desc {
   font-family: var(--font-body);
-  font-size: 0.85rem;
-  line-height: 1.45;
+  font-size: 0.78rem;
+  line-height: 1.4;
   color: var(--color-text-muted);
 }
 
-.ws-card-check {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #6258f5;
-  color: #fff;
-  box-shadow: 0 4px 10px rgba(98, 88, 245, 0.35);
-}
-
-/* Compare — full-width workflow card */
-.ws-compare {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  text-align: left;
-  width: 100%;
-  background: #ffffff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), border-color var(--transition-fast),
-    box-shadow var(--transition-fast), background var(--transition-fast);
-}
-.ws-compare:hover {
-  transform: translateY(-2px);
-  border-color: #c7cdff;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-}
-.ws-compare.active {
-  border-color: #6258f5;
-  background: linear-gradient(180deg, #fbfbff, #f5f5ff);
-  box-shadow: 0 0 0 1px #6258f5, 0 14px 30px rgba(98, 88, 245, 0.16);
-}
-.ws-compare .ws-card-icon { flex-shrink: 0; }
-.ws-compare:hover .ws-card-icon { background: #e7e9ff; }
-.ws-compare.active .ws-card-icon {
-  background: linear-gradient(135deg, #6258f5, #8b5cf6);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 8px 18px rgba(98, 88, 245, 0.28);
-}
-.ws-compare-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.ws-compare-title {
-  font-family: var(--font-sans);
-  font-size: 0.98rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: #0f172a;
-}
-
-/* Responsive */
+/* Tablet/mobile: menu becomes a horizontal, scrollable rail above the composer */
 @media (max-width: 900px) {
-  .ws-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 560px) {
-  .ws-grid { grid-template-columns: 1fr; }
-  .ws-card { padding: var(--space-3) var(--space-4); }
+  .mission-menu {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 8px;
+    padding: var(--space-2);
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mission-menu::-webkit-scrollbar { height: 6px; }
+  .mission-menu::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  .mission-menu-kicker { display: none; }
+  .mission-item { flex: 0 0 auto; align-items: center; }
+  .mission-item-desc { display: none; }
+  .mission-item-title { white-space: nowrap; }
 }

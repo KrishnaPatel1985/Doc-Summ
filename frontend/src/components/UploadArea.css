@@ -3,6 +3,11 @@
   max-width: 820px;
   margin: 0 auto;
 }
+/* Inside the command center the composer fills its column */
+.command-center .upload-area {
+  max-width: none;
+  margin: 0;
+}
 
 .composer-card {
   position: relative;

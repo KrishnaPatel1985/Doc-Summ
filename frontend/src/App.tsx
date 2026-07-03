@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Header from './components/Header';
 import TaskSelector from './components/TaskSelector';
 import UploadArea from './components/UploadArea';
-import LoadingSpinner from './components/ProgressBar';
+import MarketingSections from './components/MarketingSections';
+import AgentPipeline from './components/AgentPipeline';
 import SummaryCard from './components/SummaryCard';
 import StudyWorkspace from './components/StudyWorkspace';
 import CompareWorkspace from './components/CompareWorkspace';
@@ -165,12 +166,12 @@ const App: React.FC = () => {
             <div className={`hero ${view === 'loading' ? 'hero--compact' : ''}`}>
               <div className="hero-badge">
                 <span className="hero-badge-dark"><StarIcon /></span>
-                <span className="hero-badge-light">AI Document Workspace</span>
+                <span className="hero-badge-light">AI Document Command Center</span>
               </div>
-              <h1 className="hero-title">Understand, Study, Compare &amp; Analyze Documents with AI</h1>
+              <h1 className="hero-title">Turn Documents into Summaries, Study Tools, Comparisons &amp; Evidence-Backed Insights</h1>
               {view === 'idle' && (
                 <p className="hero-subtitle">
-                  Upload a PDF, DOCX, or TXT file, or paste your text, then choose how DocSumm should work with it.
+                  Upload PDFs, DOCX, TXT files, or paste text. Choose a workflow and let DocSumm analyze, question, compare, and transform your documents.
                 </p>
               )}
             </div>
@@ -178,12 +179,15 @@ const App: React.FC = () => {
 
           {view === 'idle' && (
             <>
-              <TaskSelector value={task} onChange={setTask} />
-              <UploadArea key={`${task}-${resetKey}`} task={task} onSubmit={handleSubmit} onCompare={handleCompare} />
+              <div className="command-center">
+                <TaskSelector value={task} onChange={setTask} />
+                <UploadArea key={`${task}-${resetKey}`} task={task} onSubmit={handleSubmit} onCompare={handleCompare} />
+              </div>
+              <MarketingSections />
             </>
           )}
 
-          {view === 'loading' && <LoadingSpinner filename={activeFilename} />}
+          {view === 'loading' && <AgentPipeline task={task} filename={activeFilename} />}
 
           {view === 'result' && comparison && (
             <CompareWorkspace result={comparison} onReset={handleReset} />

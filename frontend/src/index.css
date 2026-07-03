@@ -12,6 +12,8 @@
   --color-primary:      #6258f5;
   --color-primary-hover:#4f46e5;
   --color-primary-glow: rgba(98,88,245,0.18);
+  --color-accent-soft:  #eef0ff;
+  --ring:               0 0 0 3px var(--color-primary-glow);
 
   --color-success:      #16a34a;
   --color-success-dim:  #dcfce7;
@@ -258,6 +260,21 @@ body {
   .hero-subtitle { font-size: 0.92rem; }
   .main-layout { padding: var(--space-5) var(--space-3) var(--space-8); }
   .card { padding: var(--space-4); }
+}
+
+/* ===== Command center (mission menu + adaptive composer) ===== */
+.command-center {
+  display: grid;
+  grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+  width: 100%;
+}
+@media (max-width: 900px) {
+  .command-center {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
 }
 
 /* ===== Error Banner ===== */
