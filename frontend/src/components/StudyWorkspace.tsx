@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { PreparedDoc, StudyData, StudyOptions } from '../types';
 import { fetchStudy } from '../api/client';
 import QuizPanel from './QuizPanel';
@@ -29,20 +29,26 @@ const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({ doc, onReset }) => {
     quiz_type: 'mixed',
   });
   const [study, setStudy] = useState<StudyData>(emptyStudy);
-  const [busy, setBusy] = useState<'initial' | 'regenerate' | 'regenerate-quiz' | 'more-cards' | 'more-quiz' | null>('initial');
+  const [busy, setBusy] = useState<'initial' | 'regenerate' | 'regenerate-quiz' | 'more-cards' | 'more-quiz' | null>(null);
+  const [hasRun, setHasRun] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
   const [copied, setCopied] = useState(false);
   const [quizResetKey, setQuizResetKey] = useState(0);
-  const hasGenerated = useRef(false);
+
+  // Mirror the selected options in a ref so the click handler always sends the
+  // latest selection, immune to any stale closure over `options`.
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const set = (patch: Partial<StudyOptions>) => setOptions(o => ({ ...o, ...patch }));
 
   const run = async (mode: 'initial' | 'regenerate' | 'regenerate-quiz' | 'more-cards' | 'more-quiz') => {
     setBusy(mode);
+    setHasRun(true);
     setError(null);
     try {
-      const data = await fetchStudy(doc.job_id, options);
+      const data = await fetchStudy(doc.job_id, optionsRef.current);
       if (mode === 'more-cards') {
         setStudy(s => ({ ...s, flashcards: [...s.flashcards, ...data.flashcards] }));
       } else if (mode === 'more-quiz') {
@@ -61,13 +67,6 @@ const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({ doc, onReset }) => {
       setBusy(null);
     }
   };
-
-  useEffect(() => {
-    if (hasGenerated.current) return;
-    hasGenerated.current = true;
-    run('initial');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const copyFlashcards = async () => {
     if (!study.flashcards.length) return;
@@ -133,15 +132,22 @@ const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({ doc, onReset }) => {
           </div>
         </div>
         <div className="sw-option-actions">
-          <button className="btn btn-primary" onClick={() => run('regenerate')} disabled={!!busy}>
-            {busy === 'regenerate' || busy === 'initial' ? 'Generating…' : 'Regenerate pack'}
+          <button className="btn btn-primary" onClick={() => run(hasRun ? 'regenerate' : 'initial')} disabled={!!busy}>
+            {busy === 'regenerate' || busy === 'initial'
+              ? 'Generating…'
+              : hasRun ? 'Regenerate pack' : 'Generate study pack'}
           </button>
         </div>
       </div>
 
       {error && <div className="sw-error">{error}</div>}
 
-      {isInitialLoading ? (
+      {!hasRun ? (
+        <div className="sw-empty">
+          Choose your difficulty, quiz type, and counts above, then click
+          <strong> Generate study pack</strong> to build flashcards and a quiz from this document.
+        </div>
+      ) : isInitialLoading ? (
         <div className="sw-loading"><div className="spinner" /> Building your study pack…</div>
       ) : (
         <div className="sw-sections">

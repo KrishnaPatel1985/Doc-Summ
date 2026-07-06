@@ -5,9 +5,18 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.job import SummarizationJob
+from app.models.workspace import ChatMessage, QuizResult
 from app.schemas.job import JobHistoryItem, JobSummaryResponse, job_to_summary_response
 
 router = APIRouter()
+
+
+def _delete_related(db: Session, job_ids) -> None:
+    """Remove persisted Q&A and quiz attempts tied to the given job ids."""
+    if not job_ids:
+        return
+    db.query(ChatMessage).filter(ChatMessage.document_id.in_(job_ids)).delete(synchronize_session=False)
+    db.query(QuizResult).filter(QuizResult.job_id.in_(job_ids)).delete(synchronize_session=False)
 
 
 @router.get("/history", response_model=List[JobHistoryItem])
@@ -50,3 +59,33 @@ def get_history_item(job_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Job not found")
 
     return job_to_summary_response(job)
+
+
+@router.delete("/history")
+def clear_history(db: Session = Depends(get_db)):
+    """Delete every completed summary shown in history, plus its related records."""
+    job_ids = [
+        row.id
+        for row in db.query(SummarizationJob.id)
+        .filter(SummarizationJob.status == "done")
+        .all()
+    ]
+    if job_ids:
+        _delete_related(db, job_ids)
+        db.query(SummarizationJob).filter(
+            SummarizationJob.id.in_(job_ids)
+        ).delete(synchronize_session=False)
+        db.commit()
+    return {"deleted": len(job_ids)}
+
+
+@router.delete("/history/{job_id}")
+def delete_history_item(job_id: UUID, db: Session = Depends(get_db)):
+    """Delete a single past job by ID, plus its related records."""
+    job = db.query(SummarizationJob).filter(SummarizationJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    _delete_related(db, [job_id])
+    db.delete(job)
+    db.commit()
+    return {"deleted": 1}

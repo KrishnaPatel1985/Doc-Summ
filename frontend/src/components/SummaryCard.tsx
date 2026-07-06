@@ -90,12 +90,17 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab,
   const metrics = useMemo(() => {
     const orig = summary.char_count_original || 0;
     const sum = summary.char_count_summary || 0;
-    const reduction = orig && sum ? Math.max(0, Math.round((1 - sum / orig) * 100)) : 0;
+    // Signed reduction: negative when the summary is longer than a short source.
+    const reductionPct = orig && sum ? Math.round((1 - sum / orig) * 100) : 0;
     const wordsOrig = Math.round(orig / 5);
     const wordsSum = Math.round(sum / 5);
     const minutesSaved = Math.max(0, Math.round((wordsOrig - wordsSum) / 200));
     return {
-      orig, sum, reduction, minutesSaved,
+      orig, sum,
+      reduction: Math.max(0, reductionPct),
+      // Only surface the reduction stat when it's a real, positive reduction.
+      isReduced: reductionPct > 0,
+      minutesSaved,
       actionCount: actionItems.length,
       insightCount: insights?.key_takeaways?.length || 0,
     };
@@ -224,7 +229,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab,
       <div class="meta">Generated ${esc(fmtDate(summary.created_at))} &middot; ${esc(summary.method.toUpperCase())}
         ${summary.length ? ' &middot; ' + esc(summary.length) : ''}${summary.tone ? ' &middot; ' + esc(summary.tone) : ''}</div>
       <div class="stats">
-        <span><b>${metrics.reduction}%</b> reduced</span>
+        ${metrics.isReduced ? `<span><b>${metrics.reduction}%</b> reduced</span>` : ''}
         <span><b>${metrics.minutesSaved} min</b> saved</span>
         <span><b>${metrics.actionCount}</b> action items</span>
         <span><b>${metrics.insightCount}</b> insights</span>
@@ -359,12 +364,14 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab,
 
       {/* Metrics */}
       <div className="rd-metrics">
-        <MetricCard label="Original" value={`${(metrics.orig / 1000).toFixed(1)}k`} sub="characters" />
-        <MetricCard label="Summary" value={`${metrics.sum.toLocaleString()}`} sub="characters" />
-        <MetricCard label="Reduced" value={`${metrics.reduction}%`} sub="shorter" accent />
-        <MetricCard label="Time saved" value={`${metrics.minutesSaved}`} sub="min reading" accent />
-        <MetricCard label="Action items" value={`${metrics.actionCount}`} sub="extracted" />
-        <MetricCard label="Insights" value={`${metrics.insightCount}`} sub="takeaways" />
+        <MetricCard label="Original" value={metrics.orig / 1000} format={n => `${n.toFixed(1)}k`} sub="characters" />
+        <MetricCard label="Summary" value={metrics.sum} format={n => Math.round(n).toLocaleString()} sub="characters" />
+        {metrics.isReduced && (
+          <MetricCard label="Reduced" value={metrics.reduction} format={n => `${Math.round(n)}%`} sub="shorter" accent />
+        )}
+        <MetricCard label="Time saved" value={metrics.minutesSaved} format={n => `${Math.round(n)}`} sub="min reading" accent />
+        <MetricCard label="Action items" value={metrics.actionCount} format={n => `${Math.round(n)}`} sub="extracted" />
+        <MetricCard label="Insights" value={metrics.insightCount} format={n => `${Math.round(n)}`} sub="takeaways" />
       </div>
 
       <div className="rd-workspace">
@@ -377,7 +384,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab,
             <ContextStat label="Type" value={documentType} />
             <ContextStat label="Original length" value={`${metrics.orig.toLocaleString()} chars`} />
             <ContextStat label="Summary length" value={`${metrics.sum.toLocaleString()} chars`} />
-            <ContextStat label="Reduction" value={`${metrics.reduction}%`} accent />
+            {metrics.isReduced && <ContextStat label="Reduction" value={`${metrics.reduction}%`} accent />}
           </div>
           <div className="rd-context-section">
             <h4>Extracted Preview</h4>
@@ -448,25 +455,33 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab,
 
         {tab === 'evidence' && (
           evidenceMap.length ? (
-            <div className="rd-evidence-map">
-              {evidenceMap.map((item, i) => (
-                <article key={i} className="rd-evidence-item">
-                  <div className="rd-evidence-head">
-                    <span className="rd-evidence-index">{i + 1}</span>
-                    <div>
-                      <span className="rd-evidence-label">Claim</span>
-                      <h4>{item.claim || 'N/A'}</h4>
-                    </div>
-                    <span className={`rd-confidence rd-confidence-${confidenceTone(item.confidence)}`}>
-                      {item.confidence || 'Medium'}
-                    </span>
-                  </div>
-                  <blockquote>{item.evidence_snippet || 'No evidence snippet available.'}</blockquote>
-                  <div className="rd-evidence-source">
-                    <FileTextIcon /> {item.source || 'Document content'}
-                  </div>
-                </article>
-              ))}
+            <div className="rd-evidence-table-wrap">
+              <table className="rd-evidence-table">
+                <thead>
+                  <tr>
+                    <th className="rd-et-num">#</th>
+                    <th>Claim</th>
+                    <th>Supporting evidence</th>
+                    <th>Source</th>
+                    <th className="rd-et-conf">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evidenceMap.map((item, i) => (
+                    <tr key={i}>
+                      <td className="rd-et-num">{i + 1}</td>
+                      <td className="rd-et-claim">{item.claim || 'N/A'}</td>
+                      <td className="rd-et-evidence">{item.evidence_snippet || 'No evidence snippet available.'}</td>
+                      <td className="rd-et-source">{item.source || 'Document content'}</td>
+                      <td className="rd-et-conf">
+                        <span className={`rd-confidence rd-confidence-${confidenceTone(item.confidence)}`}>
+                          {item.confidence || 'Medium'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : <Empty text="No evidence map is available for this document." />
         )}
@@ -627,13 +642,34 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab,
   );
 };
 
-const MetricCard: React.FC<{ label: string; value: string; sub: string; accent?: boolean }> = ({ label, value, sub, accent }) => (
-  <div className={`rd-metric ${accent ? 'rd-metric-accent' : ''}`}>
-    <span className="rd-metric-label">{label}</span>
-    <span className="rd-metric-value">{value}</span>
-    <span className="rd-metric-sub">{sub}</span>
-  </div>
-);
+// Ease-out quartic count-up on real numbers (runs once when the metric mounts).
+function useCountUp(target: number, duration = 900): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / duration, 1);
+      setVal(target * (1 - Math.pow(1 - p, 4)));
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else setVal(target);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return val;
+}
+
+const MetricCard: React.FC<{ label: string; value: number; format: (n: number) => string; sub: string; accent?: boolean }> = ({ label, value, format, sub, accent }) => {
+  const n = useCountUp(value);
+  return (
+    <div className={`rd-metric ${accent ? 'rd-metric-accent' : ''}`}>
+      <span className="rd-metric-label">{label}</span>
+      <span className="rd-metric-value">{format(n)}</span>
+      <span className="rd-metric-sub">{sub}</span>
+    </div>
+  );
+};
 
 const ContextStat: React.FC<{ label: string; value: string; accent?: boolean }> = ({ label, value, accent }) => (
   <div className={`rd-context-stat ${accent ? 'rd-context-stat-accent' : ''}`}>

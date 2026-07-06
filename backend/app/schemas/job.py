@@ -1,4 +1,5 @@
 import json
+import re
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, List, Any
@@ -195,6 +196,20 @@ def _compact_text(raw: Optional[str], limit: int = 700) -> Optional[str]:
     return text if len(text) <= limit else text[: limit - 3].rstrip() + "..."
 
 
+def _full_text(raw: Optional[str]) -> Optional[str]:
+    """Full extracted document text for the preview — no length cap.
+
+    Keeps line breaks (so headings/paragraphs stay readable), trims trailing
+    whitespace per line, and collapses runs of 3+ blank lines down to one.
+    """
+    if not raw:
+        return None
+    text = raw.replace("\r\n", "\n").replace("\r", "\n")
+    text = "\n".join(line.rstrip() for line in text.split("\n")).strip()
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text or None
+
+
 def _source_snippets(input_text: Optional[str], insights_data: Any) -> List[str]:
     snippets: List[str] = []
     if isinstance(insights_data, dict):
@@ -226,7 +241,7 @@ def job_to_summary_response(job) -> JobSummaryResponse:
         status=job.status,
         char_count_original=job.char_count_original,
         char_count_summary=job.char_count_summary,
-        document_preview=_compact_text(getattr(job, "input_text", None)),
+        document_preview=_full_text(getattr(job, "input_text", None)),
         source_snippets=_source_snippets(getattr(job, "input_text", None), insights_data),
         sentences_requested=job.sentences_requested,
         length=getattr(job, "length", None),

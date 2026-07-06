@@ -43,6 +43,14 @@ export async function fetchHistoryItem(jobId: string): Promise<SummaryResponse> 
   return apiFetch<SummaryResponse>(`/history/${jobId}`);
 }
 
+export async function clearHistory(): Promise<{ deleted: number }> {
+  return apiFetch<{ deleted: number }>('/history', { method: 'DELETE' });
+}
+
+export async function deleteHistoryItem(jobId: string): Promise<{ deleted: number }> {
+  return apiFetch<{ deleted: number }>(`/history/${jobId}`, { method: 'DELETE' });
+}
+
 export async function askDocument(jobId: string, question: string): Promise<string> {
   const res = await apiFetch<{ answer: string }>('/ask', {
     method: 'POST',

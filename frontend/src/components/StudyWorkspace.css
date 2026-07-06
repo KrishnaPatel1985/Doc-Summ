@@ -2,15 +2,13 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   width: 100%;
-  background:
-    linear-gradient(#ffffff, #ffffff) padding-box,
-    linear-gradient(135deg, rgba(98,88,245,0.16), rgba(226,232,240,0.94)) border-box;
-  border: 1px solid transparent;
-  border-radius: var(--radius-2xl);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-premium);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
   color: #1e293b;
 }
 

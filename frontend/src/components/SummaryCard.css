@@ -3,25 +3,15 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   width: 100%;
-  background:
-    linear-gradient(#ffffff, #ffffff) padding-box,
-    linear-gradient(135deg, rgba(98,88,245,0.16), rgba(226,232,240,0.94)) border-box;
-  border: 1px solid transparent;
-  border-radius: var(--radius-2xl);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-premium);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
   color: #1e293b;
   overflow: hidden;
-}
-.result-dashboard::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 88px;
-  background: linear-gradient(180deg, rgba(248,250,255,0.96), rgba(255,255,255,0));
-  pointer-events: none;
 }
 
 /* Header */
@@ -54,17 +44,62 @@
   gap: var(--space-2);
 }
 .rd-metric {
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 3px;
   min-height: 74px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc); border: 1px solid #eef2f7;
-  border-radius: 12px; padding: 11px 12px;
-  box-shadow: 0 1px 2px rgba(15,23,42,0.03);
+  background: var(--color-surface-2); border: 1px solid var(--color-border);
+  border-radius: 12px; padding: 12px 14px;
 }
-.rd-metric-accent { background: linear-gradient(180deg, #f7f7ff, #eef0ff); border-color: #dfe3ff; }
-.rd-metric-label { font-family: var(--font-sans); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0; color: #94a3b8; }
-.rd-metric-value { font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
-.rd-metric-accent .rd-metric-value { color: #6366f1; }
-.rd-metric-sub { font-size: 11px; color: #94a3b8; }
+.rd-metric-accent { background: var(--color-accent-soft); border-color: #dfe3ff; }
+.rd-metric-label { font-family: var(--font-sans); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-dim); }
+.rd-metric-value { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: var(--color-ink); line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.rd-metric-accent .rd-metric-value { color: var(--color-primary); }
+.rd-metric-sub { font-size: 11px; color: var(--color-text-dim); }
+
+/* Evidence Table (enterprise audit-style, real data) */
+.rd-evidence-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.rd-evidence-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-sm);
+  min-width: 640px;
+}
+.rd-evidence-table thead th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  background: var(--color-surface-2);
+  color: var(--color-text-dim);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.rd-evidence-table tbody tr {
+  border-bottom: 1px solid #eef2f7;
+  transition: background 0.15s ease;
+}
+.rd-evidence-table tbody tr:last-child { border-bottom: none; }
+.rd-evidence-table tbody tr:hover { background: var(--color-accent-soft); }
+.rd-evidence-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+  line-height: 1.55;
+  color: #334155;
+}
+.rd-et-num { width: 40px; color: var(--color-text-dim); font-weight: 700; font-variant-numeric: tabular-nums; }
+.rd-et-claim { font-weight: 650; color: var(--color-ink); min-width: 180px; }
+.rd-et-evidence { color: #475569; min-width: 240px; }
+.rd-et-source { color: var(--color-text-muted); font-weight: 600; white-space: nowrap; }
+.rd-et-conf { white-space: nowrap; }
 
 /* Workspace layout */
 .rd-workspace {
@@ -167,10 +202,9 @@
   color: #475569;
 }
 .rd-context-section p {
-  display: -webkit-box;
-  -webkit-line-clamp: 7;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  /* Show the full extracted preview with its line breaks; the sticky panel scrolls to reveal it all. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .rd-context-snippets {
   display: flex;

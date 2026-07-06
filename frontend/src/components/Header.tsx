@@ -6,9 +6,10 @@ interface HeaderProps {
   historyOpen: boolean;
   onGetStarted: () => void;
   onLogo: () => void;
+  ctaLabel?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ onHistoryToggle, historyOpen, onGetStarted, onLogo }) => (
+const Header: React.FC<HeaderProps> = ({ onHistoryToggle, historyOpen, onGetStarted, onLogo, ctaLabel = 'Get Started' }) => (
   <header className="app-nav">
     <button className="app-nav-logo" onClick={onLogo} aria-label="DocSumm home">
       <span className="app-nav-mark">
@@ -36,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({ onHistoryToggle, historyOpen, onGetStar
       </button>
 
       <button className="app-nav-btn app-nav-btn--solid" onClick={onGetStarted}>
-        Get Started
+        {ctaLabel}
       </button>
     </div>
   </header>

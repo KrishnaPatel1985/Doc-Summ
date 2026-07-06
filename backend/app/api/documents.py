@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.job import SummarizationJob
-from app.schemas.job import PrepareResponse, _compact_text
+from app.schemas.job import PrepareResponse, _full_text
 from app.services.extractor import extract_text
 from app.services.file_handler import validate_and_save_file
 
@@ -75,6 +75,6 @@ async def prepare_document(
         filename=job.filename,
         file_type=job.file_type,
         char_count_original=job.char_count_original,
-        document_preview=_compact_text(job.input_text),
+        document_preview=_full_text(job.input_text),
         status=job.status,
     )

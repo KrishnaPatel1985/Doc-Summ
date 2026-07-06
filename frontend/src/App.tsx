@@ -4,7 +4,9 @@ import Header from './components/Header';
 import TaskSelector from './components/TaskSelector';
 import UploadArea from './components/UploadArea';
 import MarketingSections from './components/MarketingSections';
+import Footer from './components/Footer';
 import AgentPipeline from './components/AgentPipeline';
+import AgentContextPanel from './components/AgentContextPanel';
 import SummaryCard from './components/SummaryCard';
 import StudyWorkspace from './components/StudyWorkspace';
 import CompareWorkspace from './components/CompareWorkspace';
@@ -12,7 +14,7 @@ import HistoryPanel from './components/HistoryPanel';
 import { submitSummarizeJob, fetchHistoryItem, prepareDocument, compareDocuments } from './api/client';
 import type { SummaryResponse, PreparedDoc, CompareResult, DocInput, TaskKey } from './types';
 
-// Phase 1: every task reuses the summarize pipeline and opens the matching result tab.
+// Every task reuses the summarize pipeline and opens the matching result tab.
 const TASK_TO_TAB: Record<TaskKey, string> = {
   summarize: 'summary',
   study: 'study',
@@ -23,13 +25,17 @@ const TASK_TO_TAB: Record<TaskKey, string> = {
   compare: 'summary',
 };
 
-const StarIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-  </svg>
-);
+// One-click demo content so anyone can run a real workflow without their own file.
+const SAMPLE_DOC =
+  'Q3 Performance Review — Northwind Analytics. Revenue reached $8.4M in Q3 2025, up 18% year over year, driven by strong enterprise renewals (net revenue retention of 112%). Gross margin held at 74%. Leadership flagged three risks: (1) a key infrastructure vendor contract expires in January with a proposed 20% price increase, (2) two senior platform engineers have given notice, and (3) cloud costs grew 31% and are not yet optimized. The board approved hiring 12 engineers by Q1 and allocated $500K to a reliability initiative. Recommended next steps: renegotiate the vendor contract before December, begin backfill hiring immediately, and complete a cloud cost audit by the end of Q4. The CFO, Dana Reyes, will present the revised forecast at the January board meeting.';
+const SAMPLE_A =
+  'Vendor Proposal A — CloudScale. Total cost: $50,000 for a 12-month engagement. Deployment: on-premise. Timeline: 6 months to full rollout. Support: 24/7 included for 12 months. Data residency: customer-controlled. SLA: 99.9% uptime. Includes a dedicated implementation manager.';
+const SAMPLE_B =
+  'Vendor Proposal B — NimbusWorks. Total cost: $42,000 for a 12-month engagement. Deployment: cloud-hosted. Timeline: 9 months to full rollout. Support: business hours only for the first 6 months, then paid renewal. Data residency: vendor-managed. SLA: 99.5% uptime. Includes quarterly reviews.';
 
 const App: React.FC = () => {
+  const [mode, setMode] = useState<'landing' | 'app'>('landing');
+  const [contextOpen, setContextOpen] = useState(true);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [preparedDoc, setPreparedDoc] = useState<PreparedDoc | null>(null);
   const [comparison, setComparison] = useState<CompareResult | null>(null);
@@ -73,6 +79,7 @@ const App: React.FC = () => {
   });
 
   const handleCompare = (a: DocInput, b: DocInput, focus: string) => {
+    setMode('app');
     setHistoryOpen(false);
     setSummary(null);
     setPreparedDoc(null);
@@ -88,6 +95,7 @@ const App: React.FC = () => {
   };
 
   const handleSubmit = (files: File[], text: string | null, sentences: number, style: string, customInstructions: string, length: string, tone: string) => {
+    setMode('app');
     setHistoryOpen(false);
     setActiveFilename(files.length > 0 ? files.map(f => f.name).join(', ') : 'Text input');
     setSummary(null);
@@ -107,7 +115,17 @@ const App: React.FC = () => {
     summarizeMutation.mutate({ files, text, sentences, style, customInstructions, length, tone });
   };
 
+  // Run a real workflow on sample content (uses the same backend path).
+  const runSample = () => {
+    if (task === 'compare') {
+      handleCompare({ file: null, text: SAMPLE_A }, { file: null, text: SAMPLE_B }, '');
+    } else {
+      handleSubmit([], SAMPLE_DOC, 7, 'paragraph', '', 'medium', 'professional');
+    }
+  };
+
   const handleSelectJob = (jobId: string) => {
+    setMode('app');
     setHistoryOpen(false);
     setResultTab('summary'); // history always reopens on the Summary tab
     setResultWorkflow('summarize'); // saved jobs show the full summarize tab set
@@ -118,7 +136,7 @@ const App: React.FC = () => {
     historyMutation.mutate(jobId);
   };
 
-  // Full reset back to the main input state (used by Summarize Another, Get Started, logo)
+  // Full reset back to the composer (used by Summarize Another, New Analysis, logo).
   const handleReset = () => {
     summarizeMutation.reset();
     historyMutation.reset();
@@ -133,58 +151,100 @@ const App: React.FC = () => {
     focusInput();
   };
 
+  const handleMissionChange = (m: TaskKey) => {
+    setTask(m);
+    if (summary || preparedDoc || comparison) handleReset();
+  };
+
+  const enterApp = () => { setMode('app'); handleReset(); };
+
   const isLoading = summarizeMutation.isPending || historyMutation.isPending || prepareMutation.isPending || compareMutation.isPending;
   const error = summarizeMutation.error?.message || historyMutation.error?.message || prepareMutation.error?.message || compareMutation.error?.message || null;
   const hasResult = !!summary || !!preparedDoc || !!comparison;
   const view: 'idle' | 'loading' | 'result' = isLoading ? 'loading' : hasResult ? 'result' : 'idle';
 
+  const errorBanner = error && (
+    <div className="error-banner animate-in">
+      <div className="error-banner-content">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>{error}</span>
+      </div>
+      <button className="error-dismiss-btn" onClick={handleReset}>&times;</button>
+    </div>
+  );
+
+  // ---------- Landing ----------
+  if (mode === 'landing') {
+    return (
+      <div className="app-container">
+        <Header
+          onHistoryToggle={() => setHistoryOpen(o => !o)}
+          historyOpen={historyOpen}
+          onGetStarted={enterApp}
+          onLogo={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          ctaLabel="Launch DocSumm"
+        />
+        <main className="main-layout">
+          <div className="content-container">
+            <div className="hero">
+              <div className="hero-badge">
+                <span className="hero-badge-dot" />
+                <span className="hero-badge-light">AI Document Command Center</span>
+              </div>
+              <h1 className="hero-title">Turn Documents into Summaries, Study Tools, Comparisons &amp; Evidence-Backed Insights</h1>
+              <p className="hero-subtitle">
+                Upload PDFs, DOCX, TXT files, or paste text. Choose a mission and let DocSumm’s agents analyze, question, compare, and transform your documents.
+              </p>
+              <div className="hero-cta">
+                <button className="btn btn-primary btn-lg" onClick={enterApp}>
+                  Launch DocSumm
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+                <span className="hero-cta-note">No account needed · Try a sample document inside</span>
+              </div>
+            </div>
+            <MarketingSections />
+            <Footer />
+          </div>
+        </main>
+        <HistoryPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} onSelectJob={handleSelectJob} />
+      </div>
+    );
+  }
+
+  // ---------- App workspace (three panes) ----------
   return (
-    <div className="app-container">
+    <div className="workspace-shell">
       <Header
         onHistoryToggle={() => setHistoryOpen(o => !o)}
         historyOpen={historyOpen}
         onGetStarted={handleReset}
-        onLogo={handleReset}
+        onLogo={() => setMode('landing')}
+        ctaLabel="New Analysis"
       />
 
-      <main className="main-layout">
-        <div className="content-container">
-          {error && (
-            <div className="error-banner animate-in">
-              <div className="error-banner-content">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <span>{error}</span>
-              </div>
-              <button className="error-dismiss-btn" onClick={handleReset}>&times;</button>
-            </div>
-          )}
+      <div className={`workspace-body ${contextOpen ? '' : 'workspace-body--no-context'}`}>
+        <aside className="workspace-sidebar">
+          <TaskSelector value={task} onChange={handleMissionChange} />
+        </aside>
 
-          {/* Hero shown for input + loading so the brand/structure stays consistent */}
-          {view !== 'result' && (
-            <div className={`hero ${view === 'loading' ? 'hero--compact' : ''}`}>
-              <div className="hero-badge">
-                <span className="hero-badge-dark"><StarIcon /></span>
-                <span className="hero-badge-light">AI Document Command Center</span>
-              </div>
-              <h1 className="hero-title">Turn Documents into Summaries, Study Tools, Comparisons &amp; Evidence-Backed Insights</h1>
-              {view === 'idle' && (
-                <p className="hero-subtitle">
-                  Upload PDFs, DOCX, TXT files, or paste text. Choose a workflow and let DocSumm analyze, question, compare, and transform your documents.
-                </p>
-              )}
-            </div>
-          )}
+        <main className="workspace-center">
+          {errorBanner}
 
           {view === 'idle' && (
-            <>
-              <div className="command-center">
-                <TaskSelector value={task} onChange={setTask} />
-                <UploadArea key={`${task}-${resetKey}`} task={task} onSubmit={handleSubmit} onCompare={handleCompare} />
+            <div className="workspace-idle">
+              <div className="workspace-intro">
+                <h2>Run a {task === 'compare' ? 'comparison' : 'mission'} on your document</h2>
+                <p>Upload a PDF, DOCX, or TXT file, or paste text — then run the mission. New here?</p>
+                <button className="btn btn-secondary sample-btn" onClick={runSample}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  Try a sample document
+                </button>
               </div>
-              <MarketingSections />
-            </>
+              <UploadArea key={`${task}-${resetKey}`} task={task} onSubmit={handleSubmit} onCompare={handleCompare} />
+            </div>
           )}
 
           {view === 'loading' && <AgentPipeline task={task} filename={activeFilename} />}
@@ -192,22 +252,31 @@ const App: React.FC = () => {
           {view === 'result' && comparison && (
             <CompareWorkspace result={comparison} onReset={handleReset} />
           )}
-
           {view === 'result' && !comparison && preparedDoc && (
             <StudyWorkspace key={preparedDoc.job_id} doc={preparedDoc} onReset={handleReset} />
           )}
-
           {view === 'result' && !comparison && !preparedDoc && summary && (
             <SummaryCard key={summary.job_id} summary={summary} onReset={handleReset} initialTab={resultTab} workflow={resultWorkflow} />
           )}
-        </div>
-      </main>
+        </main>
 
-      <HistoryPanel
-        isOpen={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        onSelectJob={handleSelectJob}
-      />
+        {contextOpen ? (
+          <AgentContextPanel
+            task={task}
+            view={view}
+            summary={summary}
+            preparedDoc={preparedDoc}
+            comparison={comparison}
+            onCollapse={() => setContextOpen(false)}
+          />
+        ) : (
+          <button className="workspace-context-reopen" onClick={() => setContextOpen(true)} title="Show context">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        )}
+      </div>
+
+      <HistoryPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} onSelectJob={handleSelectJob} />
     </div>
   );
 };
