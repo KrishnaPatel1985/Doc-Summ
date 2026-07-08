@@ -1,14 +1,65 @@
-import type { SummaryResponse, HistoryItem, StudyData, StudyOptions, PreparedDoc, DocInput, CompareResult, ChatMessage, QuizAttempt } from '../types';
+import type { SummaryResponse, HistoryItem, StudyData, StudyOptions, PreparedDoc, DocInput, CompareResult, ChatMessage, QuizAttempt, AuthResponse, AuthUser } from '../types';
 
 const BASE = '/api';
+const AUTH_TOKEN_KEY = 'docsumm.auth-token';
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string): void {
+  try {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  } catch {
+    /* Storage may be unavailable; the current session can still use in-memory state. */
+  }
+}
+
+export function clearAuthToken(): void {
+  try {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  } catch {
+    /* Ignore storage errors. */
+  }
+}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, init);
+  const headers = new Headers(init?.headers);
+  const token = getAuthToken();
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const res = await fetch(`${BASE}${path}`, { ...init, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || body.error || `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
+}
+
+export async function registerAccount(name: string, email: string, password: string): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password }),
+  });
+}
+
+export async function loginAccount(email: string, password: string): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function fetchCurrentUser(): Promise<AuthUser> {
+  return apiFetch<AuthUser>('/auth/me');
 }
 
 export async function submitSummarizeJob(

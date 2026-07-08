@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { DemoUser } from '../auth/AuthContext';
+import type { AuthUser } from '../types';
 import { initialsOf } from '../auth/AuthContext';
 import './Header.css';
 
@@ -17,7 +17,7 @@ interface HeaderProps {
   ctaLabel?: string;
   navLinks?: NavLink[];
   onNav?: (target: string) => void;
-  user?: DemoUser | null;
+  user?: AuthUser | null;
   onSignIn?: () => void;
   onCreateAccount?: () => void;
   onSignOut?: () => void;

@@ -1,66 +1,84 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-/**
- * Frontend-only demo auth.
- *
- * DocSumm has no backend authentication, so this stores a lightweight local
- * profile (name + email only) in localStorage to personalize the UI and gate
- * "save history with a free account" messaging. It is NOT real authentication:
- * no password is ever stored, and no security guarantee is implied.
- */
-export interface DemoUser {
-  name: string;
-  email: string;
-}
+import { clearAuthToken, fetchCurrentUser, getAuthToken, loginAccount, registerAccount, setAuthToken } from '../api/client';
+import type { AuthUser } from '../types';
 
 interface AuthContextValue {
-  user: DemoUser | null;
-  signIn: (email: string, name?: string) => void;
-  createAccount: (name: string, email: string) => void;
+  user: AuthUser | null;
+  authReady: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  createAccount: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => void;
+  refreshUser: () => Promise<void>;
 }
 
-const STORAGE_KEY = 'docsumm.demo-user';
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function loadUser(): DemoUser | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed.email === 'string') {
-      return { name: String(parsed.name || ''), email: String(parsed.email) };
-    }
-  } catch {
-    /* corrupt / unavailable storage — treat as signed out */
-  }
-  return null;
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<DemoUser | null>(loadUser);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    try {
-      if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      else localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* storage unavailable — session stays in-memory only */
+    let cancelled = false;
+
+    const loadUser = async () => {
+      try {
+        localStorage.removeItem('docsumm.demo-user');
+      } catch {
+        /* Ignore storage errors. */
+      }
+
+      if (!getAuthToken()) {
+        setAuthReady(true);
+        return;
+      }
+
+      try {
+        const currentUser = await fetchCurrentUser();
+        if (!cancelled) setUser(currentUser);
+      } catch {
+        clearAuthToken();
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setAuthReady(true);
+      }
+    };
+
+    void loadUser();
+    return () => { cancelled = true; };
+  }, []);
+
+  const createAccount = async (name: string, email: string, password: string) => {
+    const auth = await registerAccount(name, email, password);
+    setAuthToken(auth.access_token);
+    setUser(auth.user);
+  };
+
+  const signIn = async (email: string, password: string) => {
+    const auth = await loginAccount(email, password);
+    setAuthToken(auth.access_token);
+    setUser(auth.user);
+  };
+
+  const signOut = () => {
+    clearAuthToken();
+    setUser(null);
+  };
+
+  const refreshUser = async () => {
+    if (!getAuthToken()) {
+      setUser(null);
+      return;
     }
-  }, [user]);
-
-  const nameFromEmail = (email: string) => email.split('@')[0] || 'there';
-
-  const createAccount = (name: string, email: string) =>
-    setUser({ name: name.trim() || nameFromEmail(email.trim()), email: email.trim() });
-
-  const signIn = (email: string, name?: string) =>
-    setUser({ name: (name && name.trim()) || nameFromEmail(email.trim()), email: email.trim() });
-
-  const signOut = () => setUser(null);
+    try {
+      setUser(await fetchCurrentUser());
+    } catch {
+      clearAuthToken();
+      setUser(null);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, createAccount, signOut }}>
+    <AuthContext.Provider value={{ user, authReady, signIn, createAccount, signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -72,7 +90,7 @@ export const useAuth = (): AuthContextValue => {
   return ctx;
 };
 
-export function initialsOf(user: DemoUser): string {
+export function initialsOf(user: AuthUser): string {
   const parts = user.name.trim().split(/\s+/).filter(Boolean);
   const first = parts[0]?.[0] || user.email[0] || '?';
   const last = parts.length > 1 ? parts[parts.length - 1][0] : '';

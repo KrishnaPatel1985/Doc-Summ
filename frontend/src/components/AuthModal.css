@@ -162,6 +162,11 @@
   cursor: pointer;
 }
 .auth-switch button:hover { text-decoration: underline; }
+.auth-switch button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  text-decoration: none;
+}
 
 .auth-note {
   margin: var(--space-4) 0 0;
