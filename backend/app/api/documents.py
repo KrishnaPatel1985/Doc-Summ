@@ -7,9 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.job import SummarizationJob
+from app.models.user import User
 from app.schemas.job import PrepareResponse, _full_text
 from app.services.extractor import extract_text
 from app.services.file_handler import validate_and_save_file
+from app.services.auth import get_optional_current_user
 
 router = APIRouter()
 
@@ -20,6 +22,7 @@ async def prepare_document(
     files: list[UploadFile] = File(default=[]),
     text: Optional[str] = Form(None),
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     """Extract and store a document's text without generating a summary.
 
@@ -56,6 +59,7 @@ async def prepare_document(
 
     job = SummarizationJob(
         id=uuid4(),
+        user_id=current_user.id if current_user else None,
         filename=combined_filename,
         file_type=(all_files[0].filename or "").rsplit(".", 1)[-1].lower() if all_files else "text",
         input_text=combined_text,

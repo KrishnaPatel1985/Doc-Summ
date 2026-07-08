@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Header from './components/Header';
 import TaskSelector from './components/TaskSelector';
@@ -56,8 +56,14 @@ const App: React.FC = () => {
   const [resultWorkflow, setResultWorkflow] = useState<TaskKey>('summarize');
   const [authModal, setAuthModal] = useState<AuthMode | null>(null);
 
-  const { user, signOut } = useAuth();
+  const { user, authReady, signOut } = useAuth();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (authReady) {
+      queryClient.invalidateQueries({ queryKey: ['history'] });
+    }
+  }, [authReady, user?.id, queryClient]);
 
   const summarizeMutation = useMutation({
     mutationFn: ({ files, text, sentences, style, customInstructions, length, tone }: { files: File[]; text: string | null; sentences: number; style: string; customInstructions: string; length: string; tone: string }) =>

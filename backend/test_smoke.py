@@ -1,6 +1,7 @@
 import os
 import tempfile
 from pathlib import Path
+from uuid import UUID
 
 
 with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
@@ -12,7 +13,8 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
     from main import app
     import app.api.intelligence as intelligence_api
     import app.api.summarize as summarize_api
-    from app.db import engine
+    from app.db import engine, SessionLocal
+    from app.models.job import SummarizationJob
 
     def fake_summarize_text(
         text: str,
@@ -101,6 +103,7 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
             assert auth["access_token"]
             assert auth["user"]["email"] == "smoke@example.com"
             token = auth["access_token"]
+            user_id = auth["user"]["id"]
             print("Auth register OK")
 
             response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
@@ -184,6 +187,62 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
             assert study["key_terms"]
             assert study["eli5"]
             print("Study Mode OK")
+
+            response = client.post(
+                "/api/summarize",
+                headers={"Authorization": f"Bearer {token}"},
+                data={
+                    "text": "A logged-in user's private document. " * 20,
+                    "sentences": "5",
+                    "style": "paragraph",
+                    "length": "medium",
+                    "tone": "professional",
+                },
+            )
+            assert response.status_code == 200, response.text
+            user_summary = response.json()
+            user_job_id = user_summary["job_id"]
+            db = SessionLocal()
+            try:
+                row = db.query(SummarizationJob).filter(SummarizationJob.id == UUID(user_job_id)).first()
+                assert row is not None
+                assert str(row.user_id) == user_id
+            finally:
+                db.close()
+            print("Authenticated summary OK")
+
+            response = client.get("/api/history", headers={"Authorization": f"Bearer {token}"})
+            assert response.status_code == 200, response.text
+            user_history = response.json()
+            assert len(user_history) == 1
+            assert user_history[0]["job_id"] == user_job_id
+            print("Authenticated history scope OK")
+
+            response = client.get("/api/history")
+            assert response.status_code == 200, response.text
+            guest_history = response.json()
+            assert len(guest_history) == 1
+            assert guest_history[0]["job_id"] == job_id
+            print("Guest history remains guest-scoped OK")
+
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "name": "Other Smoke User",
+                    "email": "other-smoke@example.com",
+                    "password": "correct-horse-battery",
+                },
+            )
+            assert response.status_code == 201, response.text
+            other_token = response.json()["access_token"]
+
+            response = client.get("/api/history", headers={"Authorization": f"Bearer {other_token}"})
+            assert response.status_code == 200, response.text
+            assert response.json() == []
+
+            response = client.get(f"/api/history/{user_job_id}", headers={"Authorization": f"Bearer {other_token}"})
+            assert response.status_code == 404, response.text
+            print("Cross-user history isolation OK")
     finally:
         engine.dispose()
 

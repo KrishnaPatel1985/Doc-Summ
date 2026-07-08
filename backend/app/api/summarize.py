@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.job import SummarizationJob
+from app.models.user import User
 from app.schemas.job import JobSummaryResponse, job_to_summary_response
 from app.services.extractor import extract_text
 from app.services.file_handler import validate_and_save_file
+from app.services.auth import get_optional_current_user
 from app.services.summarizer import summarize_text, analyze_document
 
 router = APIRouter()
@@ -29,6 +31,7 @@ async def create_summarize_job(
     tone: str = Form("professional"),
     custom_instructions: Optional[str] = Form(None),
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     # Collect and dedup uploaded files
     seen_names: set[str] = set()
@@ -78,6 +81,7 @@ async def create_summarize_job(
     # Persist job
     job = SummarizationJob(
         id=uuid4(),
+        user_id=current_user.id if current_user else None,
         filename=combined_filename,
         file_type=(all_files[0].filename or "").rsplit(".", 1)[-1].lower() if all_files else "text",
         input_text=combined_text,

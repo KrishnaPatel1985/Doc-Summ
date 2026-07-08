@@ -22,6 +22,7 @@ class QuizResult(Base):
     __tablename__ = "quiz_results"
 
     id           = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id      = Column(Uuid(as_uuid=True), index=True, nullable=True)
     job_id       = Column(Uuid(as_uuid=True), index=True, nullable=False)
     score        = Column(Integer, nullable=False, default=0)
     total        = Column(Integer, nullable=False, default=0)
@@ -33,6 +34,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id          = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id     = Column(Uuid(as_uuid=True), index=True, nullable=True)
     document_id = Column(Uuid(as_uuid=True), index=True, nullable=False)
     role        = Column(String(20), nullable=False)   # 'user' | 'assistant'
     message     = Column(Text, nullable=False)

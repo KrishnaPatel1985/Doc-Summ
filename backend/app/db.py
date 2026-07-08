@@ -16,23 +16,34 @@ class Base(DeclarativeBase):
 # the existing table. SQLite's create_all() never alters existing tables, so we
 # patch in new columns here without dropping user history.
 _ADDED_COLUMNS = {
-    "length": "VARCHAR(20) DEFAULT 'medium'",
-    "tone": "VARCHAR(20) DEFAULT 'professional'",
-    "style": "VARCHAR(20) DEFAULT 'paragraph'",
-    "key_insights": "TEXT",
-    "action_items": "TEXT",
+    "summarization_jobs": {
+        "length": "VARCHAR(20) DEFAULT 'medium'",
+        "tone": "VARCHAR(20) DEFAULT 'professional'",
+        "style": "VARCHAR(20) DEFAULT 'paragraph'",
+        "key_insights": "TEXT",
+        "action_items": "TEXT",
+        "user_id": "UUID",
+    },
+    "quiz_results": {
+        "user_id": "UUID",
+    },
+    "chat_messages": {
+        "user_id": "UUID",
+    },
 }
 
 
 def ensure_columns() -> None:
     inspector = inspect(engine)
-    if "summarization_jobs" not in inspector.get_table_names():
-        return  # create_all() will build it fresh with all columns
-    existing = {col["name"] for col in inspector.get_columns("summarization_jobs")}
+    tables = set(inspector.get_table_names())
     with engine.begin() as conn:
-        for name, ddl in _ADDED_COLUMNS.items():
-            if name not in existing:
-                conn.execute(text(f"ALTER TABLE summarization_jobs ADD COLUMN {name} {ddl}"))
+        for table, columns in _ADDED_COLUMNS.items():
+            if table not in tables:
+                continue  # create_all() will build it fresh with all columns
+            existing = {col["name"] for col in inspector.get_columns(table)}
+            for name, ddl in columns.items():
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
 
 
 def get_db():

@@ -8,6 +8,7 @@ class SummarizationJob(Base):
     __tablename__ = "summarization_jobs"
 
     id                  = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id             = Column(Uuid(as_uuid=True), index=True, nullable=True)
     filename            = Column(String(255), nullable=True)
     file_type           = Column(String(10), nullable=True)
     input_text          = Column(Text, nullable=True)
