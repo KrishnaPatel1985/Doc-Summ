@@ -11,8 +11,17 @@ import SummaryCard from './components/SummaryCard';
 import StudyWorkspace from './components/StudyWorkspace';
 import CompareWorkspace from './components/CompareWorkspace';
 import HistoryPanel from './components/HistoryPanel';
+import AuthModal from './components/AuthModal';
+import type { AuthMode } from './components/AuthModal';
+import { useAuth } from './auth/AuthContext';
 import { submitSummarizeJob, fetchHistoryItem, prepareDocument, compareDocuments } from './api/client';
 import type { SummaryResponse, PreparedDoc, CompareResult, DocInput, TaskKey } from './types';
+
+const NAV_LINKS = [
+  { label: 'Product', target: 'composer' },
+  { label: 'Workflows', target: 'workflows' },
+  { label: 'How It Works', target: 'how-it-works' },
+];
 
 // Every task reuses the summarize pipeline and opens the matching result tab.
 const TASK_TO_TAB: Record<TaskKey, string> = {
@@ -45,7 +54,9 @@ const App: React.FC = () => {
   const [task, setTask] = useState<TaskKey>('summarize');
   const [resultTab, setResultTab] = useState<string>('summary');
   const [resultWorkflow, setResultWorkflow] = useState<TaskKey>('summarize');
+  const [authModal, setAuthModal] = useState<AuthMode | null>(null);
 
+  const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
 
   const summarizeMutation = useMutation({
@@ -158,6 +169,14 @@ const App: React.FC = () => {
 
   const enterApp = () => { setMode('app'); handleReset(); };
 
+  const scrollToSection = (target: string) => {
+    document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const authModalEl = authModal && (
+    <AuthModal mode={authModal} onClose={() => setAuthModal(null)} onSwitch={setAuthModal} />
+  );
+
   const isLoading = summarizeMutation.isPending || historyMutation.isPending || prepareMutation.isPending || compareMutation.isPending;
   const error = summarizeMutation.error?.message || historyMutation.error?.message || prepareMutation.error?.message || compareMutation.error?.message || null;
   const hasResult = !!summary || !!preparedDoc || !!comparison;
@@ -180,11 +199,18 @@ const App: React.FC = () => {
     return (
       <div className="app-container">
         <Header
+          variant="landing"
           onHistoryToggle={() => setHistoryOpen(o => !o)}
           historyOpen={historyOpen}
           onGetStarted={enterApp}
           onLogo={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           ctaLabel="Launch DocSumm"
+          navLinks={NAV_LINKS}
+          onNav={scrollToSection}
+          user={user}
+          onSignIn={() => setAuthModal('signin')}
+          onCreateAccount={() => setAuthModal('signup')}
+          onSignOut={signOut}
         />
         <main className="main-layout">
           <div className="content-container">
@@ -195,21 +221,38 @@ const App: React.FC = () => {
               </div>
               <h1 className="hero-title">Turn Documents into Summaries, Study Tools, Comparisons &amp; Evidence-Backed Insights</h1>
               <p className="hero-subtitle">
-                Upload PDFs, DOCX, TXT files, or paste text. Choose a mission and let DocSumm’s agents analyze, question, compare, and transform your documents.
+                Upload PDFs, DOCX, TXT files, or paste text. Choose a workflow and let DocSumm’s agents analyze, question, compare, and transform your documents.
               </p>
               <div className="hero-cta">
                 <button className="btn btn-primary btn-lg" onClick={enterApp}>
                   Launch DocSumm
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </button>
-                <span className="hero-cta-note">No account needed · Try a sample document inside</span>
+                {!user && (
+                  <button className="btn btn-secondary btn-lg" onClick={() => setAuthModal('signup')}>
+                    Create Free Account
+                  </button>
+                )}
               </div>
+              <span className="hero-cta-note">PDF, DOCX, TXT supported · No account needed</span>
             </div>
+
+            {/* Hero composer — pick a workflow and start right here; running it enters the workspace. */}
+            <section className="hero-composer" id="composer" aria-label="Start a workflow">
+              <div className="hero-composer-head">
+                <h2>Start with any workflow</h2>
+                <p>Choose a workflow, add your document or text, and DocSumm opens the full workspace with your results.</p>
+              </div>
+              <TaskSelector value={task} onChange={setTask} variant="pills" />
+              <UploadArea key={`landing-${task}-${resetKey}`} task={task} onSubmit={handleSubmit} onCompare={handleCompare} />
+            </section>
+
             <MarketingSections />
             <Footer />
           </div>
         </main>
         <HistoryPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} onSelectJob={handleSelectJob} />
+        {authModalEl}
       </div>
     );
   }
@@ -218,11 +261,16 @@ const App: React.FC = () => {
   return (
     <div className="workspace-shell">
       <Header
+        variant="app"
         onHistoryToggle={() => setHistoryOpen(o => !o)}
         historyOpen={historyOpen}
         onGetStarted={handleReset}
         onLogo={() => setMode('landing')}
         ctaLabel="New Analysis"
+        user={user}
+        onSignIn={() => setAuthModal('signin')}
+        onCreateAccount={() => setAuthModal('signup')}
+        onSignOut={signOut}
       />
 
       <div className={`workspace-body ${contextOpen ? '' : 'workspace-body--no-context'}`}>
@@ -277,6 +325,7 @@ const App: React.FC = () => {
       </div>
 
       <HistoryPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} onSelectJob={handleSelectJob} />
+      {authModalEl}
     </div>
   );
 };

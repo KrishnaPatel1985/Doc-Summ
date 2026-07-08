@@ -61,9 +61,6 @@ const AgentContextPanel: React.FC<Props> = ({ task, view, summary, preparedDoc, 
           <Row label="Name" value={preparedDoc.filename || 'Text input'} />
           <Row label="Type" value={(preparedDoc.file_type || 'text').toUpperCase()} />
           {preparedDoc.char_count_original ? <Row label="Length" value={`${preparedDoc.char_count_original.toLocaleString()} chars`} /> : null}
-          {preparedDoc.document_preview && (
-            <div className="cp-preview"><span className="cp-kicker">Extracted preview</span><p>{preparedDoc.document_preview}</p></div>
-          )}
         </div>
       );
     }
@@ -80,9 +77,6 @@ const AgentContextPanel: React.FC<Props> = ({ task, view, summary, preparedDoc, 
           <Row label="Original" value={`${orig.toLocaleString()} chars`} />
           <Row label="Summary" value={`${sum.toLocaleString()} chars`} />
           {reductionPct > 0 && <Row label="Reduction" value={`${reductionPct}%`} accent />}
-          {summary.document_preview && (
-            <div className="cp-preview"><span className="cp-kicker">Extracted preview</span><p>{summary.document_preview}</p></div>
-          )}
         </div>
       );
     }

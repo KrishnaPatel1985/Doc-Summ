@@ -209,14 +209,33 @@
 .rd-context-snippets {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 .rd-context-snippets blockquote {
   margin: 0;
-  padding: 9px 10px;
-  background: #ffffff;
-  border-left: 3px solid #c7cdff;
-  border-radius: 8px;
+  padding: 11px 13px;
+  background: var(--color-accent-soft);
+  border: 1px solid #e2e5ff;
+  border-left: 4px solid #6366f1;
+  border-radius: 9px;
+  color: #334155;
+}
+
+/* Source Snippets becomes the primary content of the context panel now that the
+   Extracted Preview block has been removed — give it a little more emphasis. */
+.rd-context-section--snippets { margin-top: var(--space-1); }
+.rd-context-section--snippets h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.86rem;
+  color: #4338ca;
+}
+.rd-context-section--snippets h4::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
 }
 .rd-main-workspace {
   min-width: 0;

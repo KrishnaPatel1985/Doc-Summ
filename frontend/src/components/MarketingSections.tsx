@@ -43,7 +43,7 @@ const FAQS = [
 const MarketingSections: React.FC = () => (
   <div className="mk">
     {/* How it works */}
-    <section className="mk-section">
+    <section className="mk-section" id="how-it-works">
       <div className="mk-head">
         <h2 className="mk-title">How DocSumm Works</h2>
         <p className="mk-subtitle">From raw document to a focused workspace in four steps.</p>
@@ -60,7 +60,7 @@ const MarketingSections: React.FC = () => (
     </section>
 
     {/* More than a summarizer */}
-    <section className="mk-section">
+    <section className="mk-section" id="workflows">
       <div className="mk-head">
         <h2 className="mk-title">More than a Summarizer</h2>
         <p className="mk-subtitle">Seven specialized workflows plus export, all working from the same document.</p>

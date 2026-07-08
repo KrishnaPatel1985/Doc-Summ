@@ -118,12 +118,11 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab,
     const snippets = [
       ...(summary.source_snippets || []),
       ...evidenceMap.map(item => item.evidence_snippet),
-      summary.document_preview || '',
     ]
       .map(s => s.trim())
       .filter(Boolean);
-    return Array.from(new Set(snippets)).slice(0, 3);
-  }, [summary.source_snippets, summary.document_preview, evidenceMap]);
+    return Array.from(new Set(snippets)).slice(0, 4);
+  }, [summary.source_snippets, evidenceMap]);
 
   const flash = (key: string) => { setCopied(key); setTimeout(() => setCopied(null), 1800); };
 
@@ -386,12 +385,8 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, onReset, initialTab,
             <ContextStat label="Summary length" value={`${metrics.sum.toLocaleString()} chars`} />
             {metrics.isReduced && <ContextStat label="Reduction" value={`${metrics.reduction}%`} accent />}
           </div>
-          <div className="rd-context-section">
-            <h4>Extracted Preview</h4>
-            <p>{summary.document_preview || 'No extracted preview is available for this document.'}</p>
-          </div>
           {contextSnippets.length > 0 && (
-            <div className="rd-context-section">
+            <div className="rd-context-section rd-context-section--snippets">
               <h4>Source Snippets</h4>
               <div className="rd-context-snippets">
                 {contextSnippets.map((snippet, i) => (

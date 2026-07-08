@@ -2,13 +2,13 @@ import React from 'react';
 import type { TaskKey } from '../types';
 import './TaskSelector.css';
 
-interface MissionDef {
+export interface MissionDef {
   key: TaskKey;
   title: string;
   desc: string;
 }
 
-const MISSIONS: MissionDef[] = [
+export const MISSIONS: MissionDef[] = [
   { key: 'summarize', title: 'Summarize', desc: 'Executive summary, insights, and action items.' },
   { key: 'study', title: 'Study', desc: 'Flashcards, quizzes, key terms, and explanations.' },
   { key: 'ask', title: 'Ask Document', desc: 'Source-aware answers from your document.' },
@@ -18,7 +18,7 @@ const MISSIONS: MissionDef[] = [
   { key: 'evidence', title: 'Evidence Map', desc: 'Claims linked to supporting evidence.' },
 ];
 
-const MissionIcon: React.FC<{ name: TaskKey }> = ({ name }) => {
+export const MissionIcon: React.FC<{ name: TaskKey }> = ({ name }) => {
   const p = { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   switch (name) {
     case 'summarize':
@@ -43,9 +43,34 @@ const MissionIcon: React.FC<{ name: TaskKey }> = ({ name }) => {
 interface TaskSelectorProps {
   value: TaskKey;
   onChange: (task: TaskKey) => void;
+  variant?: 'sidebar' | 'pills';
 }
 
-const TaskSelector: React.FC<TaskSelectorProps> = ({ value, onChange }) => (
+const TaskSelector: React.FC<TaskSelectorProps> = ({ value, onChange, variant = 'sidebar' }) => {
+  if (variant === 'pills') {
+    return (
+      <div className="mission-pills" role="tablist" aria-label="Choose a workflow">
+        {MISSIONS.map(m => {
+          const active = value === m.key;
+          return (
+            <button
+              key={m.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              className={`mission-pill ${active ? 'active' : ''}`}
+              onClick={() => onChange(m.key)}
+            >
+              <span className="mission-pill-icon"><MissionIcon name={m.key} /></span>
+              {m.title}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
   <aside className="mission-menu" role="tablist" aria-label="Choose a mission">
     <span className="mission-menu-kicker">Missions</span>
     {MISSIONS.map(m => {
@@ -68,6 +93,7 @@ const TaskSelector: React.FC<TaskSelectorProps> = ({ value, onChange }) => (
       );
     })}
   </aside>
-);
+  );
+};
 
 export default TaskSelector;
