@@ -88,6 +88,46 @@ with tempfile.TemporaryDirectory(prefix="docsumm-smoke-") as tmp_dir:
             print("Health OK")
 
             response = client.post(
+                "/api/auth/register",
+                json={
+                    "name": "Smoke User",
+                    "email": "smoke@example.com",
+                    "password": "correct-horse-battery",
+                },
+            )
+            assert response.status_code == 201, response.text
+            auth = response.json()
+            assert auth["token_type"] == "bearer"
+            assert auth["access_token"]
+            assert auth["user"]["email"] == "smoke@example.com"
+            token = auth["access_token"]
+            print("Auth register OK")
+
+            response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+            assert response.status_code == 200, response.text
+            assert response.json()["email"] == "smoke@example.com"
+            print("Auth me OK")
+
+            response = client.post(
+                "/api/auth/login",
+                json={"email": "smoke@example.com", "password": "correct-horse-battery"},
+            )
+            assert response.status_code == 200, response.text
+            assert response.json()["access_token"]
+            print("Auth login OK")
+
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "name": "Smoke User",
+                    "email": "smoke@example.com",
+                    "password": "correct-horse-battery",
+                },
+            )
+            assert response.status_code == 409, response.text
+            print("Auth duplicate guard OK")
+
+            response = client.post(
                 "/api/summarize",
                 data={
                     "text": "Artificial intelligence is transforming industries. " * 30,
