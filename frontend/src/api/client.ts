@@ -2,6 +2,7 @@ import type { SummaryResponse, HistoryItem, StudyData, StudyOptions, PreparedDoc
 
 const BASE = '/api';
 const AUTH_TOKEN_KEY = 'docsumm.auth-token';
+const AUTH_CLEARED_EVENT = 'docsumm-auth-cleared';
 
 export function getAuthToken(): string | null {
   try {
@@ -28,6 +29,10 @@ export function clearAuthToken(): void {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  return apiFetchInternal<T>(path, init, false);
+}
+
+async function apiFetchInternal<T>(path: string, init: RequestInit | undefined, retriedAfterAuthClear: boolean): Promise<T> {
   const headers = new Headers(init?.headers);
   const token = getAuthToken();
   if (token && !headers.has('Authorization')) {
@@ -35,11 +40,24 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
+  if (res.status === 401 && token && !retriedAfterAuthClear && path !== '/auth/login' && path !== '/auth/register') {
+    clearAuthToken();
+    window.dispatchEvent(new Event(AUTH_CLEARED_EVENT));
+    if (path !== '/auth/me') {
+      return apiFetchInternal<T>(path, init, true);
+    }
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || body.error || `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
+}
+
+export function onAuthTokenCleared(callback: () => void): () => void {
+  window.addEventListener(AUTH_CLEARED_EVENT, callback);
+  return () => window.removeEventListener(AUTH_CLEARED_EVENT, callback);
 }
 
 export async function registerAccount(name: string, email: string, password: string): Promise<AuthResponse> {

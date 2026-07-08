@@ -214,6 +214,7 @@ const App: React.FC = () => {
           navLinks={NAV_LINKS}
           onNav={scrollToSection}
           user={user}
+          authReady={authReady}
           onSignIn={() => setAuthModal('signin')}
           onCreateAccount={() => setAuthModal('signup')}
           onSignOut={signOut}
@@ -274,6 +275,7 @@ const App: React.FC = () => {
         onLogo={() => setMode('landing')}
         ctaLabel="New Analysis"
         user={user}
+        authReady={authReady}
         onSignIn={() => setAuthModal('signin')}
         onCreateAccount={() => setAuthModal('signup')}
         onSignOut={signOut}

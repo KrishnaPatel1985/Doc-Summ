@@ -18,6 +18,7 @@ interface HeaderProps {
   navLinks?: NavLink[];
   onNav?: (target: string) => void;
   user?: AuthUser | null;
+  authReady?: boolean;
   onSignIn?: () => void;
   onCreateAccount?: () => void;
   onSignOut?: () => void;
@@ -33,6 +34,7 @@ const Header: React.FC<HeaderProps> = ({
   navLinks,
   onNav,
   user,
+  authReady = true,
   onSignIn,
   onCreateAccount,
   onSignOut,
@@ -76,8 +78,14 @@ const Header: React.FC<HeaderProps> = ({
           {historyOpen ? 'Close' : 'History'}
         </button>
 
-        {user ? (
+        {!authReady ? (
+          <span className="app-nav-auth-loading">Checking account...</span>
+        ) : user ? (
           <div className="app-nav-user">
+            <div className="app-nav-user-summary">
+              <span>Signed in</span>
+              <strong>{user.name || user.email}</strong>
+            </div>
             <button
               className="app-nav-avatar"
               onClick={() => setMenuOpen(o => !o)}
@@ -101,7 +109,7 @@ const Header: React.FC<HeaderProps> = ({
                     onClick={() => { setMenuOpen(false); onSignOut?.(); }}
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-                    Sign out
+                    Sign out of DocSumm
                   </button>
                 </div>
               </>

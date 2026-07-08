@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { clearAuthToken, fetchCurrentUser, getAuthToken, loginAccount, registerAccount, setAuthToken } from '../api/client';
+import { clearAuthToken, fetchCurrentUser, getAuthToken, loginAccount, onAuthTokenCleared, registerAccount, setAuthToken } from '../api/client';
 import type { AuthUser } from '../types';
 
 interface AuthContextValue {
@@ -19,6 +19,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let cancelled = false;
+    const offAuthCleared = onAuthTokenCleared(() => {
+      if (!cancelled) setUser(null);
+    });
 
     const loadUser = async () => {
       try {
@@ -44,7 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     void loadUser();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      offAuthCleared();
+    };
   }, []);
 
   const createAccount = async (name: string, email: string, password: string) => {

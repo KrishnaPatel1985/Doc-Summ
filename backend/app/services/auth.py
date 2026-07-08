@@ -130,10 +130,7 @@ def get_optional_current_user(
 ) -> Optional[User]:
     if credentials is None:
         return None
-    try:
-        return get_current_user(credentials, db)
-    except HTTPException:
-        return None
+    return get_current_user(credentials, db)
 
 
 def _encode_jwt(payload: dict) -> str:

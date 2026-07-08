@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchHistory, clearHistory, deleteHistoryItem } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import type { HistoryItem } from '../types';
 import './HistoryPanel.css';
 
@@ -15,15 +16,21 @@ const LIMIT = 10;
 const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, onSelectJob }) => {
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
+  const { user, authReady } = useAuth();
+  const historyScope = user ? user.id : 'guest';
+  const historyScopeLabel = user ? 'Personal history' : 'Guest history';
+  const historyScopeText = user
+    ? 'Showing analyses saved to your account.'
+    : 'Showing guest and older local analyses on this device.';
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
     useInfiniteQuery({
-      queryKey: ['history'],
+      queryKey: ['history', historyScope],
       queryFn: ({ pageParam = 0 }) => fetchHistory(pageParam as number, LIMIT),
       getNextPageParam: (lastPage, allPages) =>
         lastPage.length < LIMIT ? undefined : allPages.length * LIMIT,
       initialPageParam: 0,
-      enabled: isOpen,
+      enabled: isOpen && authReady,
     });
 
   const refreshHistory = () => queryClient.invalidateQueries({ queryKey: ['history'] });
@@ -35,7 +42,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, onSelectJo
 
   const handleClearAll = () => {
     if (!allItems.length || clearMut.isPending) return;
-    if (!window.confirm('Delete all summaries from history? This cannot be undone.')) return;
+    if (!window.confirm(`Delete all summaries from ${historyScopeLabel.toLowerCase()}? This cannot be undone.`)) return;
     clearMut.mutate();
   };
 
@@ -64,7 +71,12 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, onSelectJo
       <div className={`history-backdrop ${isOpen ? 'show' : ''}`} onClick={onClose} />
       <aside className={`history-panel ${isOpen ? 'open' : ''}`}>
         <div className="history-header">
-          <h2>Summary History</h2>
+          <div className="history-title-group">
+            <h2>Summary History</h2>
+            <span className={`history-scope ${user ? 'history-scope-user' : 'history-scope-guest'}`}>
+              {historyScopeLabel}
+            </span>
+          </div>
           <div className="history-header-actions">
             <button
               className="history-clear-btn"
@@ -81,6 +93,8 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, onSelectJo
           <div className="history-error">{(clearMut.error as Error).message}</div>
         )}
 
+        <div className="history-scope-note">{historyScopeText}</div>
+
         <div className="history-search-container">
           <input
             type="text"
@@ -94,7 +108,14 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, onSelectJo
         <div className="history-content">
           {error && <div className="history-error">{(error as Error).message}</div>}
 
-          {filtered.length === 0 && !isLoading && (
+          {!authReady && (
+            <div className="history-loading">
+              <div className="spinner" />
+              <span>Checking account...</span>
+            </div>
+          )}
+
+          {authReady && filtered.length === 0 && !isLoading && (
             <div className="history-empty">
               {search ? 'No matching summaries found.' : 'No history yet.'}
             </div>
@@ -131,7 +152,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, onSelectJo
             ))}
           </div>
 
-          {(isLoading || isFetchingNextPage) && (
+          {authReady && (isLoading || isFetchingNextPage) && (
             <div className="history-loading">
               <div className="spinner" />
               <span>Loading...</span>
