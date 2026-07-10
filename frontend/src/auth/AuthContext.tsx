@@ -6,7 +6,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   authReady: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  createAccount: (name: string, email: string, password: string) => Promise<void>;
+  createAccount: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   signOut: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -53,8 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const createAccount = async (name: string, email: string, password: string) => {
-    const auth = await registerAccount(name, email, password);
+  const createAccount = async (firstName: string, lastName: string, email: string, password: string) => {
+    const auth = await registerAccount(firstName, lastName, email, password);
     setAuthToken(auth.access_token);
     setUser(auth.user);
   };
@@ -68,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = () => {
     clearAuthToken();
     setUser(null);
+    window.dispatchEvent(new Event('docsumm-auth-cleared'));
   };
 
   const refreshUser = async () => {
@@ -97,7 +98,8 @@ export const useAuth = (): AuthContextValue => {
 };
 
 export function initialsOf(user: AuthUser): string {
-  const parts = user.name.trim().split(/\s+/).filter(Boolean);
+  const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.name;
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
   const first = parts[0]?.[0] || user.email[0] || '?';
   const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
   return (first + last).toUpperCase();

@@ -40,6 +40,7 @@ const Header: React.FC<HeaderProps> = ({
   onSignOut,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const displayName = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') || user.name || user.email : '';
 
   return (
     <header className="app-nav">
@@ -84,14 +85,14 @@ const Header: React.FC<HeaderProps> = ({
           <div className="app-nav-user">
             <div className="app-nav-user-summary">
               <span>Signed in</span>
-              <strong>{user.name || user.email}</strong>
+              <strong>{displayName}</strong>
             </div>
             <button
               className="app-nav-avatar"
               onClick={() => setMenuOpen(o => !o)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              title={user.name || user.email}
+              title={displayName}
             >
               {initialsOf(user)}
             </button>
@@ -100,7 +101,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="app-nav-menu-backdrop" onClick={() => setMenuOpen(false)} />
                 <div className="app-nav-menu" role="menu">
                   <div className="app-nav-menu-id">
-                    <strong>{user.name || 'Your account'}</strong>
+                    <strong>{displayName || 'Your account'}</strong>
                     <span>{user.email}</span>
                   </div>
                   <button

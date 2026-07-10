@@ -70,11 +70,11 @@ export function onAuthTokenCleared(callback: () => void): () => void {
   return () => window.removeEventListener(AUTH_CLEARED_EVENT, callback);
 }
 
-export async function registerAccount(name: string, email: string, password: string): Promise<AuthResponse> {
+export async function registerAccount(firstName: string, lastName: string, email: string, password: string): Promise<AuthResponse> {
   return apiFetch<AuthResponse>('/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ first_name: firstName, last_name: lastName, email, password }),
   });
 }
 
@@ -88,6 +88,22 @@ export async function loginAccount(email: string, password: string): Promise<Aut
 
 export async function fetchCurrentUser(): Promise<AuthUser> {
   return apiFetch<AuthUser>('/auth/me');
+}
+
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, password: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
 }
 
 export async function submitSummarizeJob(

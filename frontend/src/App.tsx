@@ -55,6 +55,7 @@ const App: React.FC = () => {
   const [resultTab, setResultTab] = useState<string>('summary');
   const [resultWorkflow, setResultWorkflow] = useState<TaskKey>('summarize');
   const [authModal, setAuthModal] = useState<AuthMode | null>(null);
+  const [resetToken, setResetToken] = useState<string | null>(null);
 
   const { user, authReady, signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -64,6 +65,15 @@ const App: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['history'] });
     }
   }, [authReady, user?.id, queryClient]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (window.location.pathname === '/reset-password' && token) {
+      setResetToken(token);
+      setAuthModal('reset');
+    }
+  }, []);
 
   const summarizeMutation = useMutation({
     mutationFn: ({ files, text, sentences, style, customInstructions, length, tone }: { files: File[]; text: string | null; sentences: number; style: string; customInstructions: string; length: string; tone: string }) =>
@@ -180,7 +190,7 @@ const App: React.FC = () => {
   };
 
   const authModalEl = authModal && (
-    <AuthModal mode={authModal} onClose={() => setAuthModal(null)} onSwitch={setAuthModal} />
+    <AuthModal mode={authModal} onClose={() => setAuthModal(null)} onSwitch={setAuthModal} resetToken={resetToken} />
   );
 
   const isLoading = summarizeMutation.isPending || historyMutation.isPending || prepareMutation.isPending || compareMutation.isPending;

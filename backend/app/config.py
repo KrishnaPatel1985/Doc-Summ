@@ -15,8 +15,15 @@ class Settings(BaseSettings):
     upload_dir: str = "uploads"
     auth_secret_key: str = ""
     auth_token_minutes: int = 60 * 24 * 7
+    password_reset_token_minutes: int = 60
     environment: str = "development"
     port: int = 8000
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    app_base_url: str = "http://localhost:8000"
 
     model_config = {"env_file": ".env"}
 
@@ -58,6 +65,10 @@ class Settings(BaseSettings):
             missing.append("AUTH_SECRET_KEY")
         if missing:
             raise RuntimeError(f"Missing required production environment variables: {', '.join(missing)}")
+
+    @property
+    def smtp_configured(self) -> bool:
+        return bool(self.smtp_host and self.smtp_from_email)
 
 
 settings = Settings()

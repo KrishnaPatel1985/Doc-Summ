@@ -3,6 +3,8 @@ export type JobStatus = 'idle' | 'done' | 'error';
 export interface AuthUser {
   id: string;
   name: string;
+  first_name?: string | null;
+  last_name?: string | null;
   email: string;
   created_at: string;
 }

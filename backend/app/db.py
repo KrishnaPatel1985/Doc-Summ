@@ -30,6 +30,10 @@ _ADDED_COLUMNS = {
     "chat_messages": {
         "user_id": "UUID",
     },
+    "users": {
+        "first_name": "VARCHAR(80)",
+        "last_name": "VARCHAR(80)",
+    },
 }
 
 

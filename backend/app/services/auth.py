@@ -2,9 +2,12 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import re
 import secrets
+import smtplib
 from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
 from typing import Optional
 from uuid import UUID
 
@@ -14,12 +17,15 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.models.user import User
+from app.models.user import PasswordResetToken, User
 
 PASSWORD_SCHEME = "pbkdf2_sha256"
 PASSWORD_ITERATIONS = 260_000
 JWT_ALGORITHM = "HS256"
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+RESET_PASSWORD_MESSAGE = "If an account exists, a reset link has been sent."
+
+logger = logging.getLogger("uvicorn.error")
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -46,6 +52,78 @@ def hash_password(password: str) -> str:
         _b64encode(salt),
         _b64encode(digest),
     ])
+
+
+def create_password_reset_token(db: Session, user: User) -> str:
+    token = secrets.token_urlsafe(32)
+    row = PasswordResetToken(
+        user_id=user.id,
+        token_hash=hash_reset_token(token),
+        expires_at=datetime.utcnow() + timedelta(minutes=settings.password_reset_token_minutes),
+    )
+    db.add(row)
+    db.commit()
+    return token
+
+
+def hash_reset_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def find_valid_reset_token(db: Session, token: str) -> PasswordResetToken | None:
+    token_hash = hash_reset_token((token or "").strip())
+    row = db.query(PasswordResetToken).filter(PasswordResetToken.token_hash == token_hash).first()
+    if not row or row.used_at is not None:
+        return None
+    if row.expires_at < datetime.utcnow():
+        return None
+    return row
+
+
+def mark_reset_tokens_used(db: Session, user_id: UUID) -> None:
+    now = datetime.utcnow()
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user_id,
+        PasswordResetToken.used_at.is_(None),
+    ).update({"used_at": now})
+
+
+def send_password_reset_link(email: str, token: str) -> None:
+    base_url = settings.app_base_url.rstrip("/")
+    reset_link = f"{base_url}/reset-password?token={token}"
+    if settings.smtp_configured:
+        _send_password_reset_email(email, reset_link)
+        return
+    logger.warning("Password reset link for %s: %s", email, reset_link)
+
+
+def _send_password_reset_email(email: str, reset_link: str) -> None:
+    msg = EmailMessage()
+    msg["Subject"] = "Reset your DocSumm password"
+    msg["From"] = settings.smtp_from_email
+    msg["To"] = email
+    msg.set_content(
+        "Use the link below to reset your DocSumm password.\n\n"
+        f"{reset_link}\n\n"
+        f"This link expires in {settings.password_reset_token_minutes} minutes. "
+        "If you did not request this, you can ignore this email."
+    )
+
+    if settings.smtp_port == 465:
+        with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
+            _smtp_login_if_needed(smtp)
+            smtp.send_message(msg)
+        return
+
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
+        smtp.starttls()
+        _smtp_login_if_needed(smtp)
+        smtp.send_message(msg)
+
+
+def _smtp_login_if_needed(smtp: smtplib.SMTP) -> None:
+    if settings.smtp_username or settings.smtp_password:
+        smtp.login(settings.smtp_username, settings.smtp_password)
 
 
 def verify_password(password: str, password_hash: str) -> bool:

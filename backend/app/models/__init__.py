@@ -1,4 +1,4 @@
 from .job import SummarizationJob
-from .user import User
+from .user import PasswordResetToken, User
 
-__all__ = ["SummarizationJob", "User"]
+__all__ = ["SummarizationJob", "PasswordResetToken", "User"]

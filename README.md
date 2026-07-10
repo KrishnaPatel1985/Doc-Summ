@@ -132,9 +132,16 @@ The SQLite schema is auto-created on startup, and an additive migration safely a
 | `CORS_ORIGINS` | No | Optional comma-separated extra allowed origins |
 | `AUTH_SECRET_KEY` | Yes in production | Long random secret used to sign auth tokens |
 | `AUTH_TOKEN_MINUTES` | No | Auth token lifetime in minutes (default `10080`) |
+| `PASSWORD_RESET_TOKEN_MINUTES` | No | Password reset link lifetime in minutes (default `60`) |
 | `UPLOAD_DIR` | No | Directory for uploaded files (default `uploads`) |
 | `PORT` | No | Backend bind port supplied by hosts like Render (default `8000`) |
 | `ENVIRONMENT` | No | Set to `production` on deployed backend |
+| `APP_BASE_URL` | Yes for password reset links | Frontend base URL used in reset links, for example `https://docsumm.vercel.app` |
+| `SMTP_HOST` | No | SMTP host for password reset email delivery |
+| `SMTP_PORT` | No | SMTP port (default `587`) |
+| `SMTP_USERNAME` | No | SMTP username |
+| `SMTP_PASSWORD` | No | SMTP password |
+| `SMTP_FROM_EMAIL` | No | Sender address for password reset emails |
 
 ---
 
@@ -167,6 +174,8 @@ Deploy the backend first, then set the frontend's API URL to the deployed backen
    - `CORS_ORIGINS`: optional extra origins, comma-separated
    - `MAX_FILE_SIZE_MB`: `20`
    - `UPLOAD_DIR`: `uploads`
+   - `APP_BASE_URL`: your Vercel frontend URL, for example `https://docsumm.vercel.app`
+   - Optional SMTP email delivery: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`
 
 Render supplies `PORT`; the backend reads it automatically through `python main.py`.
 
