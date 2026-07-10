@@ -28,6 +28,7 @@ FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    settings.validate_production_secrets()
     os.makedirs(settings.upload_dir, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     ensure_columns()
@@ -44,7 +45,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin, "http://localhost:3000", "http://localhost:5173"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -79,3 +80,9 @@ app.include_router(auth_router, prefix="/api", tags=["Auth"])
 # Serve built frontend if it exists (production / single-process mode)
 if os.path.isdir(FRONTEND_DIST):
     app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="static")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.port)

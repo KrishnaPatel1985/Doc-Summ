@@ -143,7 +143,7 @@ def _encode_jwt(payload: dict) -> str:
 
 
 def _sign(value: bytes) -> bytes:
-    return hmac.new(settings.auth_secret_key.encode("utf-8"), value, hashlib.sha256).digest()
+    return hmac.new(settings.resolved_auth_secret_key.encode("utf-8"), value, hashlib.sha256).digest()
 
 
 def _b64encode(value: bytes) -> str:

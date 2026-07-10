@@ -1,6 +1,16 @@
 import type { SummaryResponse, HistoryItem, StudyData, StudyOptions, PreparedDoc, DocInput, CompareResult, ChatMessage, QuizAttempt, AuthResponse, AuthUser } from '../types';
 
-const BASE = '/api';
+function normalizeApiBase(rawBase: string | undefined): string {
+  const value = rawBase?.trim();
+  if (!value) return '/api';
+
+  const withoutTrailingSlash = value.replace(/\/+$/, '');
+  return withoutTrailingSlash.endsWith('/api')
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api`;
+}
+
+const BASE = normalizeApiBase(import.meta.env.VITE_API_BASE_URL);
 const AUTH_TOKEN_KEY = 'docsumm.auth-token';
 const AUTH_CLEARED_EVENT = 'docsumm-auth-cleared';
 

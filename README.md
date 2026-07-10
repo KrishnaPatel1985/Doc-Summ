@@ -127,7 +127,66 @@ The SQLite schema is auto-created on startup, and an additive migration safely a
 | `OPENAI_API_KEY` | ✅ | OpenAI key — required for all AI features |
 | `DATABASE_URL` | ✅ | SQLAlchemy URL (default `sqlite:///./summarizer.db`) |
 | `MAX_FILE_SIZE_MB` | — | Per-file upload cap (default 20) |
-| `FRONTEND_ORIGIN` | — | Allowed CORS origin |
+| `FRONTEND_ORIGIN` | No | Primary allowed CORS origin (local default `http://localhost:8000`) |
+| `FRONTEND_URL` | Yes in deployment | Deployed frontend URL allowed by CORS |
+| `CORS_ORIGINS` | No | Optional comma-separated extra allowed origins |
+| `AUTH_SECRET_KEY` | Yes in production | Long random secret used to sign auth tokens |
+| `AUTH_TOKEN_MINUTES` | No | Auth token lifetime in minutes (default `10080`) |
+| `UPLOAD_DIR` | No | Directory for uploaded files (default `uploads`) |
+| `PORT` | No | Backend bind port supplied by hosts like Render (default `8000`) |
+| `ENVIRONMENT` | No | Set to `production` on deployed backend |
+
+---
+
+## Deployment from GitHub
+
+Deploy the backend first, then set the frontend's API URL to the deployed backend URL.
+
+### Frontend environment
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | Yes on Vercel | Backend base URL, for example `https://docsumm-api.onrender.com`. The app appends `/api` automatically unless the value already ends in `/api`. |
+
+### Render Backend
+
+1. Push this repository to GitHub.
+2. In Render, create a **Web Service** from the repo.
+3. Use these settings:
+   - Root directory: `backend`
+   - Runtime: Python
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `python main.py`
+4. Add environment variables:
+   - `OPENAI_API_KEY`: your OpenAI API key
+   - `AUTH_SECRET_KEY`: a long random value used to sign auth tokens
+   - `ENVIRONMENT`: `production`
+   - `DATABASE_URL`: a persistent database URL. Use Render Postgres for production, or `sqlite:///./summarizer.db` only for throwaway testing.
+   - `FRONTEND_URL`: your Vercel frontend URL after it exists, for example `https://docsumm.vercel.app`
+   - `FRONTEND_ORIGIN`: same value as `FRONTEND_URL`
+   - `CORS_ORIGINS`: optional extra origins, comma-separated
+   - `MAX_FILE_SIZE_MB`: `20`
+   - `UPLOAD_DIR`: `uploads`
+
+Render supplies `PORT`; the backend reads it automatically through `python main.py`.
+
+### Vercel Frontend
+
+1. In Vercel, create a project from the same GitHub repo.
+2. Use these settings:
+   - Framework preset: Vite
+   - Root directory: `frontend`
+   - Build command: `npm run build`
+   - Output directory: `dist`
+3. Add environment variable:
+   - `VITE_API_BASE_URL`: your Render backend URL, for example `https://docsumm-api.onrender.com`
+4. Deploy, then copy the final Vercel URL back into Render as `FRONTEND_URL` and `FRONTEND_ORIGIN`.
+
+### Local Behavior
+
+No frontend env var is needed locally. The Vite dev server keeps proxying `/api` to `http://localhost:8000`, and the built frontend served by FastAPI uses same-origin `/api`.
+
+For local backend auth, set `AUTH_SECRET_KEY` in `backend/.env` when you want login sessions to survive server restarts. Without it, development mode uses an ephemeral local signing key.
 
 ---
 
