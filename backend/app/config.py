@@ -68,7 +68,12 @@ class Settings(BaseSettings):
 
     @property
     def smtp_configured(self) -> bool:
-        return bool(self.smtp_host and self.smtp_from_email)
+        return bool(
+            self.smtp_host
+            and self.smtp_username
+            and self.smtp_password
+            and self.smtp_from_email
+        )
 
 
 settings = Settings()

@@ -2,7 +2,6 @@ import base64
 import hashlib
 import hmac
 import json
-import logging
 import re
 import secrets
 import smtplib
@@ -24,8 +23,6 @@ PASSWORD_ITERATIONS = 260_000
 JWT_ALGORITHM = "HS256"
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 RESET_PASSWORD_MESSAGE = "If an account exists, a reset link has been sent."
-
-logger = logging.getLogger("uvicorn.error")
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -94,7 +91,11 @@ def send_password_reset_link(email: str, token: str) -> None:
     if settings.smtp_configured:
         _send_password_reset_email(email, reset_link)
         return
-    logger.warning("Password reset link for %s: %s", email, reset_link)
+    _log_password_reset_link(reset_link)
+
+
+def _log_password_reset_link(reset_link: str) -> None:
+    print(f"DOCSUMM PASSWORD RESET LINK:\n{reset_link}", flush=True)
 
 
 def _send_password_reset_email(email: str, reset_link: str) -> None:
