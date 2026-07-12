@@ -137,6 +137,8 @@ The SQLite schema is auto-created on startup, and an additive migration safely a
 | `PORT` | No | Backend bind port supplied by hosts like Render (default `8000`) |
 | `ENVIRONMENT` | No | Set to `production` on deployed backend |
 | `APP_BASE_URL` | Yes for password reset links | Frontend base URL used in reset links, for example `https://docsumm.vercel.app` |
+| `RESEND_API_KEY` | No | Resend API key for password reset email delivery |
+| `RESEND_FROM_EMAIL` | No | Sender address for Resend password reset emails |
 | `SMTP_HOST` | No | SMTP host for password reset email delivery |
 | `SMTP_PORT` | No | SMTP port (default `587`) |
 | `SMTP_USERNAME` | No | SMTP username |
@@ -175,6 +177,7 @@ Deploy the backend first, then set the frontend's API URL to the deployed backen
    - `MAX_FILE_SIZE_MB`: `20`
    - `UPLOAD_DIR`: `uploads`
    - `APP_BASE_URL`: your Vercel frontend URL, for example `https://docsumm.vercel.app`
+   - Recommended email delivery on Render Free: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
    - Optional SMTP email delivery: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`
 
 Render supplies `PORT`; the backend reads it automatically through `python main.py`.

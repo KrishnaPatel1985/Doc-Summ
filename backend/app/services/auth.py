@@ -1,10 +1,13 @@
 import base64
 import hashlib
 import hmac
+import html
 import json
 import re
 import secrets
 import smtplib
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from typing import Optional
@@ -88,6 +91,9 @@ def mark_reset_tokens_used(db: Session, user_id: UUID) -> None:
 def send_password_reset_link(email: str, token: str) -> None:
     base_url = settings.app_base_url.rstrip("/")
     reset_link = f"{base_url}/reset-password?token={token}"
+    if settings.resend_configured:
+        _send_password_reset_resend(email, reset_link)
+        return
     if settings.smtp_configured:
         _send_password_reset_email(email, reset_link)
         return
@@ -98,17 +104,46 @@ def _log_password_reset_link(reset_link: str) -> None:
     print(f"DOCSUMM PASSWORD RESET LINK:\n{reset_link}", flush=True)
 
 
+def _send_password_reset_resend(email: str, reset_link: str) -> None:
+    escaped_link = html.escape(reset_link, quote=True)
+    payload = {
+        "from": settings.resend_from_email,
+        "to": [email],
+        "subject": "Reset your DocSumm password",
+        "text": _password_reset_text(reset_link),
+        "html": (
+            "<p>Use the link below to reset your DocSumm password.</p>"
+            f'<p><a href="{escaped_link}">Reset your password</a></p>'
+            f"<p>This link expires in {settings.password_reset_token_minutes} minutes. "
+            "If you did not request this, you can ignore this email.</p>"
+        ),
+    }
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {settings.resend_api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            if response.status >= 300:
+                body = response.read().decode("utf-8", errors="replace")
+                raise RuntimeError(f"Resend email failed with status {response.status}: {body}")
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Resend email failed with status {exc.code}: {body}") from exc
+
+
 def _send_password_reset_email(email: str, reset_link: str) -> None:
     msg = EmailMessage()
     msg["Subject"] = "Reset your DocSumm password"
     msg["From"] = settings.smtp_from_email
     msg["To"] = email
-    msg.set_content(
-        "Use the link below to reset your DocSumm password.\n\n"
-        f"{reset_link}\n\n"
-        f"This link expires in {settings.password_reset_token_minutes} minutes. "
-        "If you did not request this, you can ignore this email."
-    )
+    msg.set_content(_password_reset_text(reset_link))
 
     if settings.smtp_port == 465:
         with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
@@ -120,6 +155,15 @@ def _send_password_reset_email(email: str, reset_link: str) -> None:
         smtp.starttls()
         _smtp_login_if_needed(smtp)
         smtp.send_message(msg)
+
+
+def _password_reset_text(reset_link: str) -> str:
+    return (
+        "Use the link below to reset your DocSumm password.\n\n"
+        f"{reset_link}\n\n"
+        f"This link expires in {settings.password_reset_token_minutes} minutes. "
+        "If you did not request this, you can ignore this email."
+    )
 
 
 def _smtp_login_if_needed(smtp: smtplib.SMTP) -> None:

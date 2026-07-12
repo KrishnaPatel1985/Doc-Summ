@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_from_email: str = ""
+    resend_api_key: str = ""
+    resend_from_email: str = ""
     app_base_url: str = "http://localhost:8000"
 
     model_config = {"env_file": ".env"}
@@ -74,6 +76,10 @@ class Settings(BaseSettings):
             and self.smtp_password
             and self.smtp_from_email
         )
+
+    @property
+    def resend_configured(self) -> bool:
+        return bool(self.resend_api_key and self.resend_from_email)
 
 
 settings = Settings()
