@@ -89,14 +89,26 @@ def mark_reset_tokens_used(db: Session, user_id: UUID) -> None:
 
 
 def send_password_reset_link(email: str, token: str) -> None:
-    base_url = settings.app_base_url.rstrip("/")
+    base_url = settings.app_base_url.strip().rstrip("/")
     reset_link = f"{base_url}/reset-password?token={token}"
     if settings.resend_configured:
-        _send_password_reset_resend(email, reset_link)
+        print("DOCSUMM EMAIL METHOD: RESEND", flush=True)
+        print("DOCSUMM RESEND CONFIGURED: true", flush=True)
+        try:
+            resend_status, resend_body = _send_password_reset_resend(email, reset_link)
+            _log_resend_response(resend_status, resend_body)
+        except ResendDeliveryError as exc:
+            _log_resend_response(exc.status_code, exc.response_body)
+            _log_password_reset_link(reset_link)
+            raise
+        except Exception as exc:
+            _log_resend_response(0, json.dumps({"error": type(exc).__name__}))
+            _log_password_reset_link(reset_link)
+            raise
         return
-    if settings.smtp_configured:
-        _send_password_reset_email(email, reset_link)
-        return
+
+    print("DOCSUMM EMAIL METHOD: LOG_FALLBACK", flush=True)
+    print("DOCSUMM RESEND CONFIGURED: false", flush=True)
     _log_password_reset_link(reset_link)
 
 
@@ -104,10 +116,17 @@ def _log_password_reset_link(reset_link: str) -> None:
     print(f"DOCSUMM PASSWORD RESET LINK:\n{reset_link}", flush=True)
 
 
-def _send_password_reset_resend(email: str, reset_link: str) -> None:
+class ResendDeliveryError(RuntimeError):
+    def __init__(self, status_code: int, response_body: str):
+        super().__init__(f"Resend email failed with status {status_code}")
+        self.status_code = status_code
+        self.response_body = response_body
+
+
+def _send_password_reset_resend(email: str, reset_link: str) -> tuple[int, str]:
     escaped_link = html.escape(reset_link, quote=True)
     payload = {
-        "from": settings.resend_from_email,
+        "from": settings.resend_from_email.strip(),
         "to": [email],
         "subject": "Reset your DocSumm password",
         "text": _password_reset_text(reset_link),
@@ -123,19 +142,51 @@ def _send_password_reset_resend(email: str, reset_link: str) -> None:
         "https://api.resend.com/emails",
         data=data,
         headers={
-            "Authorization": f"Bearer {settings.resend_api_key}",
+            "Authorization": f"Bearer {settings.resend_api_key.strip()}",
             "Content-Type": "application/json",
         },
         method="POST",
     )
     try:
         with urllib.request.urlopen(request, timeout=15) as response:
+            body = response.read().decode("utf-8", errors="replace")
             if response.status >= 300:
-                body = response.read().decode("utf-8", errors="replace")
-                raise RuntimeError(f"Resend email failed with status {response.status}: {body}")
+                raise ResendDeliveryError(response.status, _safe_resend_response(body))
+            return response.status, _safe_resend_response(body)
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Resend email failed with status {exc.code}: {body}") from exc
+        raise ResendDeliveryError(exc.code, _safe_resend_response(body)) from exc
+
+
+def _log_resend_response(status_code: int, response_body: str) -> None:
+    print(f"DOCSUMM RESEND STATUS: {status_code}", flush=True)
+    print(f"DOCSUMM RESEND RESPONSE: {response_body}", flush=True)
+
+
+def _safe_resend_response(body: str) -> str:
+    if not body:
+        return "{}"
+
+    try:
+        parsed = json.loads(body)
+    except json.JSONDecodeError:
+        return json.dumps({"response": "Non-JSON response omitted", "length": len(body)})
+
+    def redact(value):
+        if isinstance(value, dict):
+            return {
+                key: (
+                    "[REDACTED]"
+                    if any(secret in key.lower() for secret in ("api_key", "authorization", "password", "token"))
+                    else redact(item)
+                )
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            return [redact(item) for item in value]
+        return value
+
+    return json.dumps(redact(parsed), separators=(",", ":"))[:2000]
 
 
 def _send_password_reset_email(email: str, reset_link: str) -> None:

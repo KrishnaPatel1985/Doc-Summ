@@ -79,7 +79,7 @@ class Settings(BaseSettings):
 
     @property
     def resend_configured(self) -> bool:
-        return bool(self.resend_api_key and self.resend_from_email)
+        return bool(self.resend_api_key.strip() and self.resend_from_email.strip())
 
 
 settings = Settings()
